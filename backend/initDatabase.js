@@ -1,16 +1,15 @@
-const db = require('./config/database');
-
-// ============================================
-// SCRIPT PARA CREAR TABLAS AUTOMÁTICAMENTE
-// ============================================
-// Este script crea las tablas si no existen
-// Se ejecuta una vez cuando arranca el servidor
+// backend/initDatabase.js
 
 async function initDatabase() {
   try {
     console.log('🔧 Inicializando base de datos...');
 
-    // CREAR TABLA DE USUARIOS
+    // 👇 1. AGREGA ESTA LÍNEA TEMPORALMENTE
+    // Esto borra la tabla vieja para poder crear la nueva con los cambios.
+    // (Como recién empiezas y tienes 0 animes, no pasa nada si se borra).
+    await db.query('DROP TABLE IF EXISTS animes'); 
+
+    // CREAR TABLA DE USUARIOS (Esta la dejamos igual)
     await db.query(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -22,27 +21,28 @@ async function initDatabase() {
         INDEX idx_username (username)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    console.log('✅ Tabla "usuarios" verificada/creada');
+    console.log('✅ Tabla "usuarios" verificada');
 
-    // CREAR TABLA DE ANIMES
+    // 👇 2. AQUÍ ESTÁ EL CAMBIO IMPORTANTE
+    // Cambiamos 'tipo' de ENUM a VARCHAR(50) para que acepte "Shonen", "Isekai", etc.
     await db.query(`
       CREATE TABLE IF NOT EXISTS animes (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         nombre VARCHAR(255) NOT NULL,
         imagen_url VARCHAR(500),
-        tipo ENUM('anime', 'pelicula', 'ova') DEFAULT 'anime',
+        
+        tipo VARCHAR(50) DEFAULT 'Desconocido',  -- <--- CAMBIO AQUÍ (Antes era ENUM)
+        
         capitulos_vistos INT DEFAULT 0,
         estado ENUM('viendo', 'completado', 'pausado', 'abandonado', 'planeado') DEFAULT 'viendo',
         calificacion INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-        INDEX idx_user_id (user_id),
-        INDEX idx_estado (estado)
+        FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    console.log('✅ Tabla "animes" verificada/creada');
+    console.log('✅ Tabla "animes" actualizada con soporte para géneros');
 
     console.log('🎉 Base de datos lista!');
     
