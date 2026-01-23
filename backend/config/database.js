@@ -12,7 +12,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
   ssl: {
     // Aiven requiere SSL pero rechaza certificados auto-firmados
-    rejectUnauthorized: true
+    rejectUnauthorized: false
   }
 });
 
