@@ -31,6 +31,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install and Build
+        env:
+          REACT_APP_API_URL: https://tu-backend-en-render.onrender.com
         run: |
           cd frontend
           rm -rf node_modules
