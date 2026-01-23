@@ -1,5 +1,5 @@
 // backend/initDatabase.js
-
+const db = require('./config/database');
 async function initDatabase() {
   try {
     console.log('🔧 Inicializando base de datos...');
