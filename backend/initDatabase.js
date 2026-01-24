@@ -5,59 +5,66 @@ async function initDatabase() {
   try {
     console.log('🔧 Inicializando base de datos...');
 
-    // 1️⃣ CREAR TABLA DE USUARIOS
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) NOT NULL UNIQUE,
-        email VARCHAR(100) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_email (email),
-        INDEX idx_username (username)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✅ Tabla "usuarios" verificada');
-
-    // 2️⃣ CREAR TABLA DE ANIMES (si no existe)
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS animes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        nombre VARCHAR(255) NOT NULL,
-        imagen_url VARCHAR(500),
-        tipo VARCHAR(50) DEFAULT 'Desconocido',
-        capitulos_vistos INT DEFAULT 0,
-        estado ENUM('viendo', 'completado', 'pausado', 'abandonado', 'planeado') DEFAULT 'viendo',
-        calificacion INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-
-    // 3️⃣ VERIFICAR SI LA COLUMNA 'tipo' ES ENUM (estructura antigua)
-    const [columns] = await db.query(`
-      SELECT COLUMN_TYPE 
-      FROM INFORMATION_SCHEMA.COLUMNS 
+    // ============================================
+    // 1️⃣ VERIFICAR SI LAS TABLAS YA EXISTEN
+    // ============================================
+    const [tables] = await db.query(`
+      SELECT TABLE_NAME 
+      FROM INFORMATION_SCHEMA.TABLES 
       WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME = 'animes' 
-        AND COLUMN_NAME = 'tipo'
+        AND TABLE_NAME IN ('usuarios', 'animes')
     `);
 
-    // 4️⃣ SI ES ENUM, CONVERTIRLA A VARCHAR SIN BORRAR DATOS
-    if (columns.length > 0 && columns[0].COLUMN_TYPE.startsWith('enum')) {
-      console.log('🔄 Migrando columna "tipo" de ENUM a VARCHAR...');
-      
+    const existingTables = tables.map(t => t.TABLE_NAME);
+    const usuariosExists = existingTables.includes('usuarios');
+    const animesExists = existingTables.includes('animes');
+
+    // ============================================
+    // 2️⃣ CREAR TABLA USUARIOS (solo si no existe)
+    // ============================================
+    if (!usuariosExists) {
       await db.query(`
-        ALTER TABLE animes 
-        MODIFY COLUMN tipo VARCHAR(50) DEFAULT 'Desconocido'
+        CREATE TABLE usuarios (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(50) NOT NULL UNIQUE,
+          email VARCHAR(100) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_email (email),
+          INDEX idx_username (username)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
-      
-      console.log('✅ Migración completada - DATOS PRESERVADOS');
+      console.log('✅ Tabla "usuarios" creada');
+    } else {
+      console.log('✅ Tabla "usuarios" ya existe');
     }
 
-    console.log('✅ Tabla "animes" verificada');
+    // ============================================
+    // 3️⃣ CREAR TABLA ANIMES (solo si no existe)
+    // ============================================
+    if (!animesExists) {
+      await db.query(`
+        CREATE TABLE animes (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          nombre VARCHAR(255) NOT NULL,
+          imagen_url VARCHAR(500),
+          tipo VARCHAR(50) DEFAULT 'Desconocido',
+          capitulos_vistos INT DEFAULT 0,
+          estado ENUM('viendo', 'completado', 'pausado', 'abandonado', 'planeado') DEFAULT 'viendo',
+          calificacion INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+          INDEX idx_user_id (user_id),
+          INDEX idx_estado (estado)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ Tabla "animes" creada');
+    } else {
+      console.log('✅ Tabla "animes" ya existe');
+    }
+
     console.log('🎉 Base de datos lista!');
     
   } catch (error) {
