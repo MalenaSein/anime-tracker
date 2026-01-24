@@ -4,11 +4,6 @@ async function initDatabase() {
   try {
     console.log('🔧 Inicializando base de datos...');
 
-    // 👇 1. AGREGA ESTA LÍNEA TEMPORALMENTE
-    // Esto borra la tabla vieja para poder crear la nueva con los cambios.
-    // (Como recién empiezas y tienes 0 animes, no pasa nada si se borra).
-    await db.query('DROP TABLE IF EXISTS animes'); 
-
     // CREAR TABLA DE USUARIOS (Esta la dejamos igual)
     await db.query(`
       CREATE TABLE IF NOT EXISTS usuarios (
