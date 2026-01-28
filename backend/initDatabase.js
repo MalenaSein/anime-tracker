@@ -36,7 +36,7 @@ async function initDatabase() {
       `);
       console.log('✅ Tabla "usuarios" creada');
     } else {
-      console.log('✅ Tabla "usuarios" ya existe');
+      console.log('✅ Tabla "usuarios" ya existe - datos preservados');
     }
 
     // ============================================
@@ -53,6 +53,7 @@ async function initDatabase() {
           capitulos_vistos INT DEFAULT 0,
           estado ENUM('viendo', 'completado', 'pausado', 'abandonado', 'planeado') DEFAULT 'viendo',
           calificacion INT,
+          generos VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -60,11 +61,38 @@ async function initDatabase() {
           INDEX idx_estado (estado)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
-      console.log('✅ Tabla "animes" creada');
+      console.log('✅ Tabla "animes" creada con todos los campos');
     } else {
-      console.log('✅ Tabla "animes" ya existe');
+      // Solo verificamos que la tabla tenga el campo generos
+      // Si no existe, lo agregamos SIN borrar datos
+      const [columns] = await db.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = 'animes' 
+          AND COLUMN_NAME = 'generos'
+      `);
+
+      if (columns.length === 0) {
+        // Agregar columna generos sin borrar datos existentes
+        await db.query(`
+          ALTER TABLE animes 
+          ADD COLUMN generos VARCHAR(255)
+        `);
+        console.log('✅ Tabla "animes" actualizada - campo "generos" agregado (datos preservados)');
+      } else {
+        console.log('✅ Tabla "animes" ya existe - todos los datos preservados');
+      }
     }
 
+    // ============================================
+    // 4️⃣ VERIFICAR CANTIDAD DE DATOS
+    // ============================================
+    const [userCount] = await db.query('SELECT COUNT(*) as count FROM usuarios');
+    const [animeCount] = await db.query('SELECT COUNT(*) as count FROM animes');
+    
+    console.log(`📊 Usuarios en DB: ${userCount[0].count}`);
+    console.log(`📊 Animes en DB: ${animeCount[0].count}`);
     console.log('🎉 Base de datos lista!');
     
   } catch (error) {
