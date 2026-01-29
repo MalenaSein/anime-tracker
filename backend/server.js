@@ -4,7 +4,9 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const animeRoutes = require('./routes/animeRoutes');
-const initDatabase = require('./initDatabase'); // 👈 NUEVO
+const scheduleRoutes = require('./routes/scheduleRoutes'); // 🆕 NUEVO
+const initDatabase = require('./initDatabase');
+const { scheduleNotifications } = require('./jobs/notificationScheduler'); // 🆕 NUEVO
 
 const app = express();
 
@@ -25,16 +27,18 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   res.json({ 
     message: '🎌 API de Anime Tracker funcionando',
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
-      animes: '/api/animes'
+      animes: '/api/animes',
+      schedules: '/api/schedules' // 🆕 NUEVO
     }
   });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/animes', animeRoutes);
+app.use('/api/schedules', scheduleRoutes); // 🆕 NUEVO
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
@@ -56,18 +60,21 @@ app.use((err, req, res, next) => {
 // ============================================
 const PORT = process.env.PORT || 3001;
 
-// 👇 PRIMERO inicializamos la base de datos, LUEGO iniciamos el servidor
 async function startServer() {
   try {
-    // Crear tablas si no existen
+    // 1. Crear tablas si no existen
     await initDatabase();
     
-    // Iniciar servidor
+    // 2. Iniciar el scheduler de notificaciones 🆕 NUEVO
+    scheduleNotifications();
+    
+    // 3. Iniciar servidor
     app.listen(PORT, () => {
       console.log('');
       console.log('╔═══════════════════════════════════════╗');
       console.log('🚀 Servidor corriendo en puerto', PORT);
       console.log('🔗 URL:', `http://localhost:${PORT}`);
+      console.log('📧 Sistema de notificaciones: ACTIVO'); // 🆕 NUEVO
       console.log('╚═══════════════════════════════════════╝');
       console.log('');
     });
