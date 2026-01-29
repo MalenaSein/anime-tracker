@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown, MoreVertical, Star, Trash2, Check, PlayCircle, Edit2, X, Save } from 'lucide-react';
 
-const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
+const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(0);
@@ -86,7 +86,6 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
     if (!menuButtonRef.current) return { top: 0, left: 0 };
     const rect = menuButtonRef.current.getBoundingClientRect();
     
-    // Estimar la altura del menú (aproximadamente 150-200px dependiendo de las opciones)
     const menuHeight = isWatching ? 200 : 100;
     const spaceBelow = window.innerHeight - rect.bottom;
     const shouldOpenUpward = spaceBelow < menuHeight;
@@ -97,10 +96,447 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
         ? { bottom: window.innerHeight - rect.top + 5 + 'px' }
         : { top: rect.bottom + 5 + 'px' }
       ),
-      left: Math.max(10, rect.left - 140) + 'px'
+      left: isMobile ? '50%' : Math.max(10, rect.left - 140) + 'px',
+      transform: isMobile ? 'translateX(-50%)' : 'none'
     };
   };
 
+  // ========================================
+  // VERSIÓN MÓVIL
+  // ========================================
+  if (isMobile) {
+    const mobileStyles = {
+      card: {
+        background: '#1f2937',
+        borderRadius: '0.75rem',
+        padding: '1rem',
+        border: '1px solid #374151',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
+      },
+      header: {
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'flex-start'
+      },
+      image: {
+        width: '60px',
+        height: '85px',
+        objectFit: 'cover',
+        borderRadius: '0.5rem',
+        border: '2px solid #374151',
+        flexShrink: 0
+      },
+      info: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        minWidth: 0
+      },
+      name: {
+        fontWeight: '600',
+        color: '#f9fafb',
+        fontSize: '1rem',
+        wordBreak: 'break-word'
+      },
+      tag: {
+        display: 'inline-block',
+        background: '#374151',
+        color: '#c7d2fe',
+        fontSize: '0.75rem',
+        padding: '0.25rem 0.5rem',
+        borderRadius: '0.25rem',
+        fontWeight: '500',
+        width: 'fit-content'
+      },
+      actions: {
+        display: 'flex',
+        gap: '0.5rem',
+        flexDirection: 'column'
+      },
+      episodeControls: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        background: '#111827',
+        borderRadius: '0.5rem',
+        padding: '0.75rem'
+      },
+      episodeButton: {
+        padding: '0.5rem',
+        border: 'none',
+        background: '#374151',
+        cursor: 'pointer',
+        borderRadius: '0.375rem',
+        display: 'flex',
+        alignItems: 'center',
+        color: '#e5e7eb',
+        transition: 'background-color 0.2s'
+      },
+      episodeNumber: {
+        fontWeight: '700',
+        fontSize: '1.25rem',
+        color: '#f9fafb',
+        minWidth: '50px',
+        textAlign: 'center'
+      },
+      buttonGroup: {
+        display: 'flex',
+        gap: '0.5rem'
+      },
+      button: {
+        flex: 1,
+        padding: '0.75rem',
+        border: '1px solid #374151',
+        borderRadius: '0.5rem',
+        background: 'transparent',
+        color: '#e5e7eb',
+        fontSize: '0.875rem',
+        fontWeight: '500',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
+        transition: 'all 0.2s'
+      },
+      ratingStars: {
+        display: 'flex',
+        gap: '0.25rem',
+        justifyContent: 'center'
+      }
+    };
+
+    return (
+      <>
+        <div style={mobileStyles.card}>
+          <div style={mobileStyles.header}>
+            <img 
+              src={anime.imagen_url || 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'}
+              alt={anime.nombre}
+              style={mobileStyles.image}
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime';
+              }}
+            />
+            <div style={mobileStyles.info}>
+              <div style={mobileStyles.name}>{anime.nombre}</div>
+              <span style={mobileStyles.tag}>{anime.tipo}</span>
+            </div>
+          </div>
+
+          <div style={mobileStyles.actions}>
+            {isWatching ? (
+              <>
+                <div style={mobileStyles.episodeControls}>
+                  <button 
+                    onClick={() => handleUpdateCapitulos(-1)}
+                    style={mobileStyles.episodeButton}
+                    onMouseOver={(e) => e.target.style.background = '#4b5563'}
+                    onMouseOut={(e) => e.target.style.background = '#374151'}
+                  >
+                    <ChevronDown size={24} />
+                  </button>
+                  <span style={mobileStyles.episodeNumber}>{anime.capitulos_vistos}</span>
+                  <button 
+                    onClick={() => handleUpdateCapitulos(1)}
+                    style={mobileStyles.episodeButton}
+                    onMouseOver={(e) => e.target.style.background = '#4b5563'}
+                    onMouseOut={(e) => e.target.style.background = '#374151'}
+                  >
+                    <ChevronUp size={24} />
+                  </button>
+                </div>
+
+                <div style={mobileStyles.buttonGroup}>
+                  <button
+                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(anime.nombre + ' anime')}`, '_blank')}
+                    style={mobileStyles.button}
+                  >
+                    🔍 Buscar
+                  </button>
+                  <button
+                    ref={menuButtonRef}
+                    onClick={() => setShowMenu(!showMenu)}
+                    style={mobileStyles.button}
+                  >
+                    <MoreVertical size={18} /> Más
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={mobileStyles.ratingStars}>
+                  {anime.estado === 'completado' && anime.calificacion > 0 ? (
+                    [1,2,3,4,5].map(n => (
+                      <Star 
+                        key={n} 
+                        size={20} 
+                        style={{ 
+                          fill: n <= anime.calificacion ? '#facc15' : 'none',
+                          color: n <= anime.calificacion ? '#facc15' : '#d1d5db'
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+                      {anime.estado === 'abandonado' ? 'Abandonado' : 'Sin calificar'}
+                    </span>
+                  )}
+                </div>
+                <span style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center' }}>
+                  {anime.capitulos_vistos} capítulos vistos
+                </span>
+                <button
+                  ref={menuButtonRef}
+                  onClick={() => setShowMenu(!showMenu)}
+                  style={{...mobileStyles.button, width: '100%'}}
+                >
+                  <MoreVertical size={18} /> Opciones
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Menú desplegable (igual para móvil y desktop) */}
+        {showMenu && (
+          <div ref={menuRef} style={{
+            ...getMenuPosition(),
+            background: '#1f2937',
+            border: '1px solid #374151',
+            borderRadius: '0.5rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+            zIndex: 9999,
+            minWidth: isMobile ? '200px' : '10rem'
+          }}>
+            {isWatching && (
+              <>
+                <button
+                  onClick={() => handleMenuAction(() => setShowRating(true))}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '0.75rem 1rem',
+                    border: 'none',
+                    background: '#1f2937',
+                    color: '#e5e7eb',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    borderTopLeftRadius: '0.5rem',
+                    borderTopRightRadius: '0.5rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#374151'}
+                  onMouseOut={(e) => e.target.style.background = '#1f2937'}
+                >
+                  <Check size={16} /> Finalizado
+                </button>
+                <button
+                  onClick={() => handleMenuAction(() => handleChangeEstado('abandonado'))}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '0.75rem 1rem',
+                    border: 'none',
+                    background: '#1f2937',
+                    color: '#f59e0b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#374151'}
+                  onMouseOut={(e) => e.target.style.background = '#1f2937'}
+                >
+                  <Trash2 size={16} /> Abandonar
+                </button>
+              </>
+            )}
+            {anime.estado === 'completado' && (
+              <button
+                onClick={() => handleMenuAction(() => handleChangeEstado('viendo', 0))}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.75rem 1rem',
+                  border: 'none',
+                  background: '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  borderTopLeftRadius: '0.5rem',
+                  borderTopRightRadius: '0.5rem'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#374151'}
+                onMouseOut={(e) => e.target.style.background = '#1f2937'}
+              >
+                <PlayCircle size={16} /> Nueva Temporada
+              </button>
+            )}
+            {anime.estado === 'abandonado' && (
+              <button
+                onClick={() => handleMenuAction(() => handleChangeEstado('viendo'))}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.75rem 1rem',
+                  border: 'none',
+                  background: '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  borderTopLeftRadius: '0.5rem',
+                  borderTopRightRadius: '0.5rem'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#374151'}
+                onMouseOut={(e) => e.target.style.background = '#1f2937'}
+              >
+                <PlayCircle size={16} /> Retomar
+              </button>
+            )}
+            <button
+              onClick={() => handleMenuAction(() => onDelete(anime.id))}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.75rem 1rem',
+                border: 'none',
+                background: '#1f2937',
+                color: '#ef4444',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                borderTop: '1px solid #374151',
+                borderBottomLeftRadius: '0.5rem',
+                borderBottomRightRadius: '0.5rem'
+              }}
+              onMouseOver={(e) => e.target.style.background = '#374151'}
+              onMouseOut={(e) => e.target.style.background = '#1f2937'}
+            >
+              <Trash2 size={16} /> Eliminar
+            </button>
+          </div>
+        )}
+
+        {/* Modal de calificación (igual para móvil y desktop) */}
+        {showRating && (
+          <div 
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 50,
+              padding: '1rem'
+            }}
+            onClick={() => setShowRating(false)}
+          >
+            <div 
+              style={{
+                background: 'white',
+                borderRadius: '0.5rem',
+                padding: '1.5rem',
+                maxWidth: '24rem',
+                width: '100%'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{
+                fontSize: '1.25rem',
+                fontWeight: 'bold',
+                marginBottom: '1rem',
+                color: '#1f2937',
+                textAlign: 'center'
+              }}>
+                Califica "{anime.nombre}"
+              </h3>
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                marginBottom: '1.5rem',
+                justifyContent: 'center'
+              }}>
+                {[1,2,3,4,5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setRating(n)}
+                    style={{
+                      padding: '0.5rem',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Star 
+                      size={isMobile ? 36 : 32}
+                      style={{ 
+                        fill: n <= rating ? '#facc15' : 'none',
+                        color: n <= rating ? '#facc15' : '#d1d5db'
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setShowRating(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#e5e7eb',
+                    color: '#1f2937',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleFinish}
+                  disabled={rating === 0}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: rating === 0 ? '#d1d5db' : '#9333ea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '500',
+                    cursor: rating === 0 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Finalizar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ========================================
+  // VERSIÓN DESKTOP (código original)
+  // ========================================
   const styles = {
     row: {
       display: 'grid',
@@ -206,116 +642,32 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
       borderRadius: '0.25rem',
       transition: 'background-color 0.2s'
     },
-    menuDropdown: {
-      ...getMenuPosition(),
-      background: '#1f2937',
-      border: '1px solid #374151',
-      borderRadius: '0.5rem',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
-      zIndex: 9999,
-      minWidth: '10rem'
-    },
-    menuItem: {
-      width: '100%',
-      textAlign: 'left',
-      padding: '0.75rem 1rem',
-      border: 'none',
-      background: '#1f2937',
-      color: '#e5e7eb',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      transition: 'background-color 0.2s',
-      fontSize: '0.875rem',
-      fontFamily: 'inherit'
-    },
-    menuItemFirst: {
-      borderTopLeftRadius: '0.5rem',
-      borderTopRightRadius: '0.5rem'
-    },
-    menuItemLast: {
-      borderBottomLeftRadius: '0.5rem',
-      borderBottomRightRadius: '0.5rem'
-    },
-    overlay: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 50
-    },
-    modal: {
-      background: 'white',
-      borderRadius: '0.5rem',
-      padding: '1.5rem',
-      maxWidth: '24rem',
-      width: '100%',
-      margin: '0 1rem'
-    },
-    modalTitle: {
-      fontSize: '1.125rem',
-      fontWeight: 'bold',
-      marginBottom: '1rem',
-      color: '#1f2937'
-    },
-    starsContainer: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: '0.5rem',
-      marginBottom: '1.5rem'
-    },
-    starButton: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      transition: 'transform 0.2s',
-      padding: 0
-    },
-    modalButtons: {
+    editButtons: {
       display: 'flex',
       gap: '0.5rem'
     },
-    actionButton: {
-      flex: 1,
-      padding: '0.5rem 0.75rem',
-      borderRadius: '0.5rem',
-      border: 'none',
-      cursor: 'pointer',
-      fontWeight: '500',
-      transition: 'background-color 0.2s'
-    },
-    editButtons: {
-      display: 'flex',
-      gap: '0.25rem'
-    },
     iconButton: {
-      padding: '0.375rem',
+      padding: '0.5rem',
       border: 'none',
-      borderRadius: '0.25rem',
+      borderRadius: '0.375rem',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
-      transition: 'opacity 0.2s'
+      justifyContent: 'center',
+      transition: 'all 0.2s'
     }
   };
 
   return (
     <>
-      <div 
-        style={styles.row}
-        onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
-        onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
-      >
+      <div style={styles.row}>
         <div style={styles.imageContainer}>
           <img 
-            src={anime.imagen_url || 'https://via.placeholder.com/70x100/9333ea/ffffff?text=Anime'} 
+            src={anime.imagen_url || 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'}
             alt={anime.nombre}
             style={styles.image}
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/70x100/9333ea/ffffff?text=Anime';
+              e.target.src = 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime';
             }}
           />
         </div>
@@ -327,6 +679,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
               value={editedData.nombre}
               onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
               style={styles.input}
+              autoFocus
             />
           ) : (
             <div style={styles.name}>{anime.nombre}</div>
@@ -450,13 +803,36 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
         </div>
       </div>
 
+      {/* Menú y modal igual que arriba */}
       {showMenu && (
-        <div ref={menuRef} style={styles.menuDropdown}>
+        <div ref={menuRef} style={{
+          ...getMenuPosition(),
+          background: '#1f2937',
+          border: '1px solid #374151',
+          borderRadius: '0.5rem',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+          zIndex: 9999,
+          minWidth: '10rem'
+        }}>
           {isWatching && (
             <>
               <button
                 onClick={() => handleMenuAction(() => setIsEditing(true))}
-                style={{ ...styles.menuItem, ...styles.menuItemFirst }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.75rem 1rem',
+                  border: 'none',
+                  background: '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  borderTopLeftRadius: '0.5rem',
+                  borderTopRightRadius: '0.5rem'
+                }}
                 onMouseOver={(e) => e.target.style.background = '#374151'}
                 onMouseOut={(e) => e.target.style.background = '#1f2937'}
               >
@@ -464,7 +840,19 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
               </button>
               <button
                 onClick={() => handleMenuAction(() => setShowRating(true))}
-                style={styles.menuItem}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.75rem 1rem',
+                  border: 'none',
+                  background: '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem'
+                }}
                 onMouseOver={(e) => e.target.style.background = '#374151'}
                 onMouseOut={(e) => e.target.style.background = '#1f2937'}
               >
@@ -472,7 +860,19 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
               </button>
               <button
                 onClick={() => handleMenuAction(() => handleChangeEstado('abandonado'))}
-                style={{ ...styles.menuItem, color: '#f59e0b' }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.75rem 1rem',
+                  border: 'none',
+                  background: '#1f2937',
+                  color: '#f59e0b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem'
+                }}
                 onMouseOver={(e) => e.target.style.background = '#374151'}
                 onMouseOut={(e) => e.target.style.background = '#1f2937'}
               >
@@ -483,7 +883,21 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
           {anime.estado === 'completado' && (
             <button
               onClick={() => handleMenuAction(() => handleChangeEstado('viendo', 0))}
-              style={{ ...styles.menuItem, ...styles.menuItemFirst }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.75rem 1rem',
+                border: 'none',
+                background: '#1f2937',
+                color: '#e5e7eb',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                borderTopLeftRadius: '0.5rem',
+                borderTopRightRadius: '0.5rem'
+              }}
               onMouseOver={(e) => e.target.style.background = '#374151'}
               onMouseOut={(e) => e.target.style.background = '#1f2937'}
             >
@@ -493,7 +907,21 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
           {anime.estado === 'abandonado' && (
             <button
               onClick={() => handleMenuAction(() => handleChangeEstado('viendo'))}
-              style={{ ...styles.menuItem, ...styles.menuItemFirst }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.75rem 1rem',
+                border: 'none',
+                background: '#1f2937',
+                color: '#e5e7eb',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                borderTopLeftRadius: '0.5rem',
+                borderTopRightRadius: '0.5rem'
+              }}
               onMouseOver={(e) => e.target.style.background = '#374151'}
               onMouseOut={(e) => e.target.style.background = '#1f2937'}
             >
@@ -502,11 +930,21 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
           )}
           <button
             onClick={() => handleMenuAction(() => onDelete(anime.id))}
-            style={{ 
-              ...styles.menuItem, 
-              ...styles.menuItemLast,
-              color: '#ef4444', 
-              borderTop: '1px solid #374151' 
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '0.75rem 1rem',
+              border: 'none',
+              background: '#1f2937',
+              color: '#ef4444',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem',
+              borderTop: '1px solid #374151',
+              borderBottomLeftRadius: '0.5rem',
+              borderBottomRightRadius: '0.5rem'
             }}
             onMouseOver={(e) => e.target.style.background = '#374151'}
             onMouseOut={(e) => e.target.style.background = '#1f2937'}
@@ -517,20 +955,56 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
       )}
 
       {showRating && (
-        <div style={styles.overlay} onClick={() => setShowRating(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Califica "{anime.nombre}"</h3>
-            <div style={styles.starsContainer}>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50
+          }}
+          onClick={() => setShowRating(false)}
+        >
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '0.5rem',
+              padding: '1.5rem',
+              maxWidth: '24rem',
+              width: '100%'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: 'bold',
+              marginBottom: '1rem',
+              color: '#1f2937',
+              textAlign: 'center'
+            }}>
+              Califica "{anime.nombre}"
+            </h3>
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              marginBottom: '1.5rem',
+              justifyContent: 'center'
+            }}>
               {[1,2,3,4,5].map(n => (
                 <button
                   key={n}
                   onClick={() => setRating(n)}
-                  style={styles.starButton}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  style={{
+                    padding: '0.5rem',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer'
+                  }}
                 >
                   <Star 
-                    size={32} 
+                    size={32}
                     style={{ 
                       fill: n <= rating ? '#facc15' : 'none',
                       color: n <= rating ? '#facc15' : '#d1d5db'
@@ -539,29 +1013,34 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
                 </button>
               ))}
             </div>
-            <div style={styles.modalButtons}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 onClick={() => setShowRating(false)}
-                style={{ ...styles.actionButton, background: '#e5e7eb', color: '#1f2937' }}
-                onMouseOver={(e) => e.target.style.background = '#d1d5db'}
-                onMouseOut={(e) => e.target.style.background = '#e5e7eb'}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#e5e7eb',
+                  color: '#1f2937',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
               >
                 Cancelar
               </button>
               <button
                 onClick={handleFinish}
                 disabled={rating === 0}
-                style={{ 
-                  ...styles.actionButton, 
-                  background: rating === 0 ? '#d1d5db' : '#9333ea', 
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: rating === 0 ? '#d1d5db' : '#9333ea',
                   color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '500',
                   cursor: rating === 0 ? 'not-allowed' : 'pointer'
-                }}
-                onMouseOver={(e) => {
-                  if (rating > 0) e.target.style.background = '#7c3aed';
-                }}
-                onMouseOut={(e) => {
-                  if (rating > 0) e.target.style.background = '#9333ea';
                 }}
               >
                 Finalizar

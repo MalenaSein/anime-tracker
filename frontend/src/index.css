@@ -10,9 +10,187 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* ==========================================
+   UTILIDADES RESPONSIVE
+   ========================================== */
+
+/* Ocultar en móvil */
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Ocultar en desktop */
+@media (min-width: 641px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* ==========================================
+   MEJORAS DE USABILIDAD MÓVIL
+   ========================================== */
+
+/* Prevenir zoom en inputs en iOS */
+@media screen and (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Scroll suave */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Mejorar el tap en móviles */
+button, a {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ==========================================
+   SCROLLBAR PERSONALIZADA
+   ========================================== */
+
+/* Para navegadores webkit (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+/* ==========================================
+   ANIMACIONES SUAVES
+   ========================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ==========================================
+   RESPONSIVE UTILITIES
+   ========================================== */
+
+/* Contenedor responsive */
+.container-responsive {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding: 2rem;
+  }
+}
+
+/* Grid responsive */
+.grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Texto responsive */
+.text-responsive-sm {
+  font-size: 0.875rem;
+}
+
+.text-responsive-base {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1rem, 3vw, 1.25rem);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.25rem, 4vw, 1.875rem);
+}
+
+.text-responsive-2xl {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+}
+
+/* ==========================================
+   MEJORAS DE ACCESIBILIDAD
+   ========================================== */
+
+/* Focus visible mejorado */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Reducir animaciones para usuarios que lo prefieran */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
