@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const ANIME_TYPES = [
   'Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke',
@@ -15,13 +15,25 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
     capitulos_vistos: 0
   });
 
-  const ANIME_TYPES = [
-    'Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke',
-    'Isekai', 'Mecha', 'Slice of Life', 'Romance', 'Comedia',
-    'Drama', 'Acción', 'Aventura', 'Fantasía', 'Sci-Fi',
-    'Horror', 'Misterio', 'Deportes', 'Musical', 'Ecchi',
-    'Harem', 'Yaoi', 'Yuri', 'Supernatural', 'Otro'
-  ];
+  // Efecto para manejar la tecla Enter
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && show && formData.nombre.trim()) {
+        e.preventDefault();
+        handleSubmit();
+      } else if (e.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [show, formData, onClose]);
 
   if (!show) return null;
 
@@ -110,6 +122,12 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
       cursor: 'pointer',
       fontWeight: '500',
       transition: 'background-color 0.2s'
+    },
+    hint: {
+      fontSize: '0.75rem',
+      color: '#6b7280',
+      marginTop: '1rem',
+      textAlign: 'center'
     }
   };
 
@@ -128,6 +146,7 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
               style={styles.input}
               placeholder="Ej: Naruto Shippuden"
               required
+              autoFocus
             />
           </div>
 
@@ -174,6 +193,10 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
               Agregar
             </button>
           </div>
+
+          <p style={styles.hint}>
+            💡 Presiona <strong>Enter</strong> para agregar o <strong>Esc</strong> para cancelar
+          </p>
         </div>
       </div>
     </div>
