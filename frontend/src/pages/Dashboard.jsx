@@ -17,11 +17,22 @@ const Dashboard = ({ user, onLogout }) => {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [filters, setFilters] = useState({
     tipo: '',
     rating: '',
     sortBy: 'updated'
   });
+
+  // Detectar cambios de tamaño de pantalla
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Cargar animes del backend
   useEffect(() => {
@@ -36,10 +47,8 @@ const Dashboard = ({ user, onLogout }) => {
     'Harem', 'Yaoi', 'Yuri', 'Supernatural', 'Otro'
   ];
 
-  // Cargar animes desde la API
   const loadAnimes = async () => {
     try {
-      // Esta función debe estar en tu api.js
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
       const token = localStorage.getItem('token');
       
@@ -134,22 +143,18 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
-  // Filtrar y ordenar animes
   const getFilteredAnimes = () => {
     let filtered = animes.filter(a => a.estado === activeTab);
 
-    // Aplicar filtro de tipo
     if (filters.tipo) {
       filtered = filtered.filter(a => a.tipo === filters.tipo);
     }
 
-    // Aplicar filtro de calificación (exacta, no "o más")
     if (filters.rating) {
       const exactRating = parseInt(filters.rating);
       filtered = filtered.filter(a => a.calificacion === exactRating);
     }
 
-    // Aplicar ordenamiento
     switch (filters.sortBy) {
       case 'name-asc':
         filtered.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -183,7 +188,7 @@ const Dashboard = ({ user, onLogout }) => {
     content: {
       maxWidth: '80rem',
       margin: '0 auto',
-      padding: '2rem'
+      padding: isMobile ? '1rem' : '2rem'
     },
     loadingContainer: {
       minHeight: '100vh',
@@ -193,26 +198,30 @@ const Dashboard = ({ user, onLogout }) => {
       justifyContent: 'center'
     },
     loadingText: {
-      fontSize: '1.5rem',
+      fontSize: isMobile ? '1.25rem' : '1.5rem',
       fontWeight: '600',
       color: '#6366f1'
     },
     tabContainer: {
       display: 'flex',
-      gap: '0.75rem',
+      gap: isMobile ? '0.5rem' : '0.75rem',
       marginBottom: '1.5rem',
       flexWrap: 'wrap',
       borderBottom: '1px solid #374151',
-      paddingBottom: '0.5rem'
+      paddingBottom: '0.5rem',
+      overflowX: isMobile ? 'auto' : 'visible',
+      WebkitOverflowScrolling: 'touch'
     },
     tab: {
-      padding: '0.625rem 1.25rem',
+      padding: isMobile ? '0.5rem 0.75rem' : '0.625rem 1.25rem',
       borderRadius: '0.5rem',
       fontWeight: '500',
       border: 'none',
       cursor: 'pointer',
       transition: 'all 0.2s',
-      fontSize: '0.9rem'
+      fontSize: isMobile ? '0.8rem' : '0.9rem',
+      whiteSpace: 'nowrap',
+      flexShrink: 0
     },
     activeTab: {
       color: 'white'
@@ -224,28 +233,30 @@ const Dashboard = ({ user, onLogout }) => {
     actionButtonsContainer: {
       marginBottom: '1.5rem',
       display: 'flex',
-      gap: '0.75rem'
+      gap: '0.75rem',
+      flexDirection: isMobile ? 'column' : 'row'
     },
     actionButton: {
-      padding: '0.75rem 1.25rem',
+      padding: isMobile ? '0.875rem' : '0.75rem 1.25rem',
       borderRadius: '0.5rem',
       border: '1px solid',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: '0.5rem',
       fontWeight: '500',
-      fontSize: '0.9rem',
+      fontSize: isMobile ? '0.95rem' : '0.9rem',
       transition: 'all 0.2s'
     },
     tableContainer: {
       background: '#1f2937',
       borderRadius: '0.75rem',
       border: '1px solid #374151',
-      overflow: 'hidden'
+      overflow: isMobile ? 'visible' : 'hidden'
     },
     tableHeader: {
-      display: 'grid',
+      display: isMobile ? 'none' : 'grid',
       gridTemplateColumns: activeTab === 'viendo'
         ? '80px 1fr 150px 150px 120px 100px'
         : '80px 1fr 150px 150px 120px 140px 100px',
@@ -259,12 +270,18 @@ const Dashboard = ({ user, onLogout }) => {
     },
     emptyState: {
       textAlign: 'center',
-      padding: '3rem',
-      color: '#6b7280'
+      padding: isMobile ? '2rem 1rem' : '3rem',
+      color: '#6b7280',
+      fontSize: isMobile ? '0.9rem' : '1rem'
+    },
+    mobileAnimeList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1rem',
+      padding: isMobile ? '0.5rem' : '1rem'
     }
   };
 
-  // Mostrar loading mientras carga
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -387,7 +404,7 @@ const Dashboard = ({ user, onLogout }) => {
               animeTypes={ANIME_TYPES}
             />
 
-            {/* Botones de acción - Solo en pestaña "Viendo" */}
+            {/* Botones de acción */}
             {activeTab === 'viendo' && (
               <div style={styles.actionButtonsContainer}>
                 <button
@@ -416,21 +433,36 @@ const Dashboard = ({ user, onLogout }) => {
             )}
 
             <div style={styles.tableContainer}>
-              <div style={styles.tableHeader}>
-                <div>Portada</div>
-                <div>Nombre</div>
-                <div>Tipo</div>
-                <div>Capítulos</div>
-                <div>Búsqueda</div>
-                {activeTab !== 'viendo' && <div>Calificación</div>}
-                <div>Acciones</div>
-              </div>
+              {!isMobile && (
+                <div style={styles.tableHeader}>
+                  <div>Portada</div>
+                  <div>Nombre</div>
+                  <div>Tipo</div>
+                  <div>Capítulos</div>
+                  <div>Búsqueda</div>
+                  {activeTab !== 'viendo' && <div>Calificación</div>}
+                  <div>Acciones</div>
+                </div>
+              )}
 
               {filteredAnimes.length === 0 ? (
                 <div style={styles.emptyState}>
                   {activeTab === 'viendo' && 'No hay animes en esta categoría'}
                   {activeTab === 'completado' && 'No hay animes completados con estos filtros'}
                   {activeTab === 'abandonado' && 'No hay animes abandonados con estos filtros'}
+                </div>
+              ) : isMobile ? (
+                <div style={styles.mobileAnimeList}>
+                  {filteredAnimes.map(anime => (
+                    <AnimeCard
+                      key={anime.id}
+                      anime={anime}
+                      isWatching={activeTab === 'viendo'}
+                      onUpdate={updateAnime}
+                      onDelete={deleteAnime}
+                      isMobile={true}
+                    />
+                  ))}
                 </div>
               ) : (
                 filteredAnimes.map(anime => (
@@ -440,6 +472,7 @@ const Dashboard = ({ user, onLogout }) => {
                     isWatching={activeTab === 'viendo'}
                     onUpdate={updateAnime}
                     onDelete={deleteAnime}
+                    isMobile={false}
                   />
                 ))
               )}
