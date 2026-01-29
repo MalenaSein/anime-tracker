@@ -7,12 +7,14 @@ import SeasonModal from '../components/SeasonModal';
 import Navbar from '../components/Navbar';
 import Filters from '../components/Filters';
 import Statistics from '../components/Statistics';
+import ScheduleCalendar from '../components/ScheduleCalendar';
 
 const Dashboard = ({ user, onLogout }) => {
   const [animes, setAnimes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('viendo');
   const [showStatistics, setShowStatistics] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [filters, setFilters] = useState({
@@ -279,77 +281,103 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Tabs */}
         <div style={styles.tabContainer}>
           <button
-            onClick={() => { setActiveTab('viendo'); setShowStatistics(false); }}
+            onClick={() => { setActiveTab('viendo'); setShowStatistics(false); setShowSchedule(false); }}
             style={{
               ...styles.tab,
-              ...(activeTab === 'viendo' && !showStatistics
+              ...(activeTab === 'viendo' && !showStatistics && !showSchedule
                 ? { ...styles.activeTab, background: '#6366f1' }
                 : styles.inactiveTab)
             }}
             onMouseOver={(e) => {
-              if (activeTab !== 'viendo' || showStatistics) e.target.style.color = '#e5e7eb';
+              if (activeTab !== 'viendo' || showStatistics || showSchedule) e.target.style.color = '#e5e7eb';
             }}
             onMouseOut={(e) => {
-              if (activeTab !== 'viendo' || showStatistics) e.target.style.color = '#9ca3af';
+              if (activeTab !== 'viendo' || showStatistics || showSchedule) e.target.style.color = '#9ca3af';
             }}
           >
             Viendo ({animes.filter(a => a.estado === 'viendo').length})
           </button>
           <button
-            onClick={() => { setActiveTab('completado'); setShowStatistics(false); }}
+            onClick={() => { setActiveTab('completado'); setShowStatistics(false); setShowSchedule(false); }}
             style={{
               ...styles.tab,
-              ...(activeTab === 'completado' && !showStatistics
+              ...(activeTab === 'completado' && !showStatistics && !showSchedule
                 ? { ...styles.activeTab, background: '#10b981' }
                 : styles.inactiveTab)
             }}
             onMouseOver={(e) => {
-              if (activeTab !== 'completado' || showStatistics) e.target.style.color = '#e5e7eb';
+              if (activeTab !== 'completado' || showStatistics || showSchedule) e.target.style.color = '#e5e7eb';
             }}
             onMouseOut={(e) => {
-              if (activeTab !== 'completado' || showStatistics) e.target.style.color = '#9ca3af';
+              if (activeTab !== 'completado' || showStatistics || showSchedule) e.target.style.color = '#9ca3af';
             }}
           >
             Completados ({animes.filter(a => a.estado === 'completado').length})
           </button>
           <button
-            onClick={() => { setActiveTab('abandonado'); setShowStatistics(false); }}
+            onClick={() => { setActiveTab('abandonado'); setShowStatistics(false); setShowSchedule(false); }}
             style={{
               ...styles.tab,
-              ...(activeTab === 'abandonado' && !showStatistics
+              ...(activeTab === 'abandonado' && !showStatistics && !showSchedule
                 ? { ...styles.activeTab, background: '#f59e0b' }
                 : styles.inactiveTab)
             }}
             onMouseOver={(e) => {
-              if (activeTab !== 'abandonado' || showStatistics) e.target.style.color = '#e5e7eb';
+              if (activeTab !== 'abandonado' || showStatistics || showSchedule) e.target.style.color = '#e5e7eb';
             }}
             onMouseOut={(e) => {
-              if (activeTab !== 'abandonado' || showStatistics) e.target.style.color = '#9ca3af';
+              if (activeTab !== 'abandonado' || showStatistics || showSchedule) e.target.style.color = '#9ca3af';
             }}
           >
             Abandonados ({animes.filter(a => a.estado === 'abandonado').length})
           </button>
           <button
-            onClick={() => setShowStatistics(true)}
+            onClick={() => {
+              setShowStatistics(true);
+              setShowSchedule(false);
+            }}
             style={{
               ...styles.tab,
-              ...(showStatistics
+              ...(showStatistics && !showSchedule
                 ? { ...styles.activeTab, background: '#8b5cf6' }
                 : styles.inactiveTab)
             }}
             onMouseOver={(e) => {
-              if (!showStatistics) e.target.style.color = '#e5e7eb';
+              if (!showStatistics || showSchedule) e.target.style.color = '#e5e7eb';
             }}
             onMouseOut={(e) => {
-              if (!showStatistics) e.target.style.color = '#9ca3af';
+              if (!showStatistics || showSchedule) e.target.style.color = '#9ca3af';
             }}
           >
             Estadísticas
           </button>
+          <button
+            onClick={() => {
+              setShowSchedule(true);
+              setShowStatistics(false);
+              setActiveTab('');
+            }}
+            style={{
+              ...styles.tab,
+              ...(showSchedule
+                ? { ...styles.activeTab, background: '#ec4899' }
+                : styles.inactiveTab)
+            }}
+            onMouseOver={(e) => {
+              if (!showSchedule) e.target.style.color = '#e5e7eb';
+            }}
+            onMouseOut={(e) => {
+              if (!showSchedule) e.target.style.color = '#9ca3af';
+            }}
+          >
+            Calendario
+          </button>
         </div>
 
         {/* Contenido */}
-        {showStatistics ? (
+        {showSchedule ? (
+          <ScheduleCalendar animes={animes} />
+        ) : showStatistics ? (
           <Statistics animes={animes} />
         ) : (
           <>
