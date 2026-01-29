@@ -85,9 +85,18 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete }) => {
   const getMenuPosition = () => {
     if (!menuButtonRef.current) return { top: 0, left: 0 };
     const rect = menuButtonRef.current.getBoundingClientRect();
+    
+    // Estimar la altura del menú (aproximadamente 150-200px dependiendo de las opciones)
+    const menuHeight = isWatching ? 200 : 100;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const shouldOpenUpward = spaceBelow < menuHeight;
+    
     return {
       position: 'fixed',
-      top: rect.bottom + 5 + 'px',
+      ...(shouldOpenUpward 
+        ? { bottom: window.innerHeight - rect.top + 5 + 'px' }
+        : { top: rect.bottom + 5 + 'px' }
+      ),
       left: Math.max(10, rect.left - 140) + 'px'
     };
   };
