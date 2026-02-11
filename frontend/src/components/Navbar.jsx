@@ -154,7 +154,7 @@ const Navbar = ({ user, onLogout }) => {
     <>
       <div style={styles.container}>
         <div style={styles.leftSection}>
-          <h1 style={styles.title}>🎌 Anime Tracker</h1>
+          <h1 style={styles.title}> Anime Tracker</h1>
           {window.innerWidth >= 640 && (
             <p style={styles.subtitle}>Gestiona tu colección de anime</p>
           )}
