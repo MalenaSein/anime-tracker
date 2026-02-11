@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 // ============================================
 app.get('/', (req, res) => {
   res.json({ 
-    message: '🎌 API de Anime Tracker funcionando',
+    message: 'API de Anime Tracker funcionando',
     version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
