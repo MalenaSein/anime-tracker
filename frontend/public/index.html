@@ -2,15 +2,46 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#9333ea" />
-  <meta name="description" content="Trackea tus animes favoritos con Anime Tracker" />
+  <meta name="description" content="Rastrea tus animes favoritos y recibe notificaciones de nuevos episodios" />
+  
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+  
+  <!-- Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/icons/icon-192x192.png" />
+  
+  <!-- iOS Meta Tags para PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Anime Tracker</title>
+  <meta name="apple-mobile-web-app-title" content="Anime Tracker" />
+  
+  <title>Anime Tracker - Gestiona tus Animes</title>
 </head>
 <body>
-  <noscript>Necesitas habilitar JavaScript para ejecutar esta app.</noscript>
+  <noscript>Necesitas habilitar JavaScript para usar Anime Tracker.</noscript>
   <div id="root"></div>
+  
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/service-worker.js')
+          .then((registration) => {
+            console.log('✅ SW registrado:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('❌ Error registrando SW:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
