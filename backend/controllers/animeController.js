@@ -7,14 +7,10 @@ const { obtenerImagenAnime, obtenerImagenPorDefecto } = require('../services/ima
 exports.getAnimes = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log('📺 Obteniendo animes del usuario:', userId);
-
     const [animes] = await db.query(
       'SELECT * FROM animes WHERE user_id = ? ORDER BY updated_at DESC',
       [userId]
     );
-
-    console.log(`✅ Encontrados ${animes.length} animes`);
     res.json(animes);
   } catch (error) {
     console.error('❌ Error obteniendo animes:', error);
@@ -28,33 +24,31 @@ exports.getAnimes = async (req, res) => {
 exports.createAnime = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nombre, tipo, capitulos_vistos } = req.body;
+    const { nombre, tipo, capitulos_vistos, estado } = req.body;
 
     console.log('➕ Creando anime:', nombre);
 
-    // 🎨 BUSCAR IMAGEN AUTOMÁTICAMENTE
     let imagen_url = await obtenerImagenAnime(nombre);
-    
-    // Si no se encontró imagen, usar placeholder
     if (!imagen_url) {
       imagen_url = obtenerImagenPorDefecto();
     }
 
-    // Insertamos el nuevo anime CON la imagen
+    // Validar estado (incluye 'por_ver')
+    const estadoValido = ['viendo', 'completado', 'pausado', 'abandonado', 'por_ver'].includes(estado)
+      ? estado
+      : 'viendo';
+
     const [result] = await db.query(
       'INSERT INTO animes (user_id, nombre, imagen_url, tipo, capitulos_vistos, estado) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, nombre, imagen_url, tipo, capitulos_vistos || 0, 'viendo']
+      [userId, nombre, imagen_url, tipo, capitulos_vistos || 0, estadoValido]
     );
 
-    // Obtenemos el anime recién creado
     const [newAnime] = await db.query(
       'SELECT * FROM animes WHERE id = ?',
       [result.insertId]
     );
 
     console.log('✅ Anime creado con ID:', result.insertId);
-    console.log('🖼️ Imagen asignada:', imagen_url);
-
     res.status(201).json(newAnime[0]);
   } catch (error) {
     console.error('❌ Error creando anime:', error);
@@ -64,31 +58,52 @@ exports.createAnime = async (req, res) => {
 
 // ============================================
 // ACTUALIZAR UN ANIME
+// FIX: Se incluye 'tipo' en el UPDATE para que no se pierda al editar
 // ============================================
 exports.updateAnime = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const { nombre, capitulos_vistos, estado, calificacion } = req.body;
+    const { nombre, capitulos_vistos, estado, calificacion, tipo } = req.body;
 
-    console.log('🔄 Actualizando anime ID:', id);
+    console.log('🔄 Actualizando anime ID:', id, '| tipo recibido:', tipo);
+
+    // Obtener el anime actual para no perder campos no enviados
+    const [currentAnime] = await db.query(
+      'SELECT * FROM animes WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+
+    if (currentAnime.length === 0) {
+      return res.status(404).json({ error: 'Anime no encontrado' });
+    }
+
+    const current = currentAnime[0];
+
+    // Usar los valores enviados, o los actuales si no se envían
+    const updatedNombre = nombre !== undefined ? nombre : current.nombre;
+    const updatedTipo = tipo !== undefined ? tipo : current.tipo;  // ← FIX CRÍTICO
+    const updatedCaps = capitulos_vistos !== undefined ? capitulos_vistos : current.capitulos_vistos;
+    const updatedEstado = estado !== undefined ? estado : current.estado;
+    const updatedCalificacion = calificacion !== undefined ? calificacion : current.calificacion;
 
     const [result] = await db.query(
-      'UPDATE animes SET nombre = ?, capitulos_vistos = ?, estado = ?, calificacion = ? WHERE id = ? AND user_id = ?',
-      [nombre, capitulos_vistos, estado, calificacion, id, userId]
+      `UPDATE animes 
+       SET nombre = ?, tipo = ?, capitulos_vistos = ?, estado = ?, calificacion = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND user_id = ?`,
+      [updatedNombre, updatedTipo, updatedCaps, updatedEstado, updatedCalificacion, id, userId]
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Anime no encontrado' });
     }
 
-    // Obtenemos el anime actualizado
     const [updatedAnime] = await db.query(
       'SELECT * FROM animes WHERE id = ?',
       [id]
     );
 
-    console.log('✅ Anime actualizado');
+    console.log('✅ Anime actualizado - tipo guardado:', updatedAnime[0].tipo);
     res.json(updatedAnime[0]);
   } catch (error) {
     console.error('❌ Error actualizando anime:', error);
@@ -104,8 +119,6 @@ exports.deleteAnime = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    console.log('🗑️ Eliminando anime ID:', id);
-
     const [result] = await db.query(
       'DELETE FROM animes WHERE id = ? AND user_id = ?',
       [id, userId]
@@ -115,7 +128,6 @@ exports.deleteAnime = async (req, res) => {
       return res.status(404).json({ error: 'Anime no encontrado' });
     }
 
-    console.log('✅ Anime eliminado');
     res.json({ message: 'Anime eliminado exitosamente' });
   } catch (error) {
     console.error('❌ Error eliminando anime:', error);
