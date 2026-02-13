@@ -69,7 +69,8 @@ const MusicPlayer = () => {
     };
   }, [dragging]);
 
-  const embedUrl = `https://www.youtube.com/embed/videoseries?list=${PLAYLIST_ID}&autoplay=${open ? 1 : 0}&enablejsapi=1`;
+  // URL fija - el autoplay lo maneja el usuario desde el player
+  const embedUrl = `https://www.youtube.com/embed/videoseries?list=${PLAYLIST_ID}&autoplay=1&enablejsapi=1`;
 
   if (pos.x === null) return null;
 
@@ -169,22 +170,23 @@ const MusicPlayer = () => {
             </button>
           </div>
 
-          {/* YouTube iframe */}
-          {!minimized && (
-            <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
-              <iframe
-                src={embedUrl}
-                title="Playlist"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{
-                  position: 'absolute', top: 0, left: 0,
-                  width: '100%', height: '100%',
-                  border: 'none',
-                }}
-              />
-            </div>
-          )}
+          {/* YouTube iframe - siempre montado, solo se oculta visualmente */}
+          <div style={{
+            position: 'relative', width: '100%', paddingBottom: '56.25%',
+            display: minimized ? 'none' : 'block'
+          }}>
+            <iframe
+              src={embedUrl}
+              title="Playlist"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
+                border: 'none',
+              }}
+            />
+          </div>
         </div>
       )}
     </>
