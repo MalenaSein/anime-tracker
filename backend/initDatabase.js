@@ -8,13 +8,14 @@ async function initDatabase() {
       SELECT TABLE_NAME 
       FROM INFORMATION_SCHEMA.TABLES 
       WHERE TABLE_SCHEMA = DATABASE() 
-        AND TABLE_NAME IN ('usuarios', 'animes', 'schedules')
+        AND TABLE_NAME IN ('usuarios', 'animes', 'schedules', 'push_subscriptions')
     `);
 
     const existingTables = tables.map(t => t.TABLE_NAME);
     const usuariosExists = existingTables.includes('usuarios');
     const animesExists = existingTables.includes('animes');
     const schedulesExists = existingTables.includes('schedules');
+    const pushSubscriptionsExists = existingTables.includes('push_subscriptions');
 
     // ============================================
     // TABLA USUARIOS
@@ -148,12 +149,36 @@ async function initDatabase() {
       console.log('✅ Tabla "schedules" verificada');
     }
 
+    // ============================================
+    // TABLA PUSH_SUBSCRIPTIONS 🆕 NUEVO
+    // ============================================
+    if (!pushSubscriptionsExists) {
+      await db.query(`
+        CREATE TABLE push_subscriptions (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          endpoint VARCHAR(500) NOT NULL UNIQUE,
+          p256dh VARCHAR(255) NOT NULL,
+          auth VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+          INDEX idx_user_id (user_id),
+          INDEX idx_endpoint (endpoint(255))
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('✅ Tabla "push_subscriptions" creada');
+    } else {
+      console.log('✅ Tabla "push_subscriptions" verificada');
+    }
+
     // Stats
     const [userCount] = await db.query('SELECT COUNT(*) as count FROM usuarios');
     const [animeCount] = await db.query('SELECT COUNT(*) as count FROM animes');
     const [scheduleCount] = await db.query('SELECT COUNT(*) as count FROM schedules');
+    const [pushCount] = await db.query('SELECT COUNT(*) as count FROM push_subscriptions');
     
-    console.log(`📊 Usuarios: ${userCount[0].count} | Animes: ${animeCount[0].count} | Horarios: ${scheduleCount[0].count}`);
+    console.log(`📊 Usuarios: ${userCount[0].count} | Animes: ${animeCount[0].count} | Horarios: ${scheduleCount[0].count} | Push: ${pushCount[0].count}`);
     console.log('🎉 Base de datos lista!');
     
   } catch (error) {

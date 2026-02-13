@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
-const { sendPasswordResetEmail } = require('../services/emailService');
+const { sendPasswordResetEmail } = require('../services/pushNotificationService');
 const crypto = require('crypto');
 
 // ============================================
@@ -187,31 +187,39 @@ exports.requestPasswordReset = async (req, res) => {
       [email]
     );
 
-    // Siempre responder igual (seguridad: no revelar si el email existe)
+    // Siempre responder igual por seguridad
     if (users.length === 0) {
-      return res.json({ message: 'Si el email existe, recibirás las instrucciones' });
+      return res.json({ 
+        message: 'Si el email existe, se generó un código',
+        codeGenerated: false 
+      });
     }
 
     const user = users[0];
 
-    // Generar token de reset (válido 1 hora)
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    // Generar código de 6 dígitos
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora
 
-    // Guardar token hasheado en DB
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    // Hashear el código antes de guardarlo
+    const hashedCode = crypto.createHash('sha256').update(resetCode).digest('hex');
 
     await db.query(
       'UPDATE usuarios SET reset_token = ?, reset_token_expiry = ? WHERE id = ?',
-      [hashedToken, resetTokenExpiry, user.id]
+      [hashedCode, resetTokenExpiry, user.id]
     );
 
-    // Enviar email con el token en texto plano
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
-    await sendPasswordResetEmail(user.email, user.username, resetUrl);
+    console.log(`📋 Código de recuperación para ${email}: ${resetCode}`);
+    console.log(`   Username: ${user.username}`);
 
-    console.log('✅ Email de recuperación enviado a:', email);
-    res.json({ message: 'Si el email existe, recibirás las instrucciones' });
+    // ✅ DEVOLVER EL CÓDIGO AL FRONTEND
+    res.json({ 
+      message: 'Código de recuperación generado',
+      codeGenerated: true,
+      resetCode: resetCode,  // ← El frontend lo mostrará
+      username: user.username,
+      expiresIn: '1 hora'
+    });
 
   } catch (error) {
     console.error('❌ Error en solicitud de reset:', error);
@@ -220,27 +228,40 @@ exports.requestPasswordReset = async (req, res) => {
 };
 
 // ============================================
-// RESETEAR CONTRASEÑA CON TOKEN ✨ NUEVO
+// RESETEAR CONTRASEÑA CON CÓDIGO ✨ NUEVO
 // ============================================
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email, code, newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+      return res.status(400).json({ 
+        error: 'La contraseña debe tener al menos 6 caracteres' 
+      });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    if (!code || code.length !== 6) {
+      return res.status(400).json({ 
+        error: 'El código debe tener 6 dígitos' 
+      });
+    }
 
+    // Hashear el código ingresado
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+    // Buscar usuario con código válido
     const [users] = await db.query(
-      'SELECT * FROM usuarios WHERE reset_token = ? AND reset_token_expiry > NOW()',
-      [hashedToken]
+      'SELECT * FROM usuarios WHERE email = ? AND reset_token = ? AND reset_token_expiry > NOW()',
+      [email, hashedCode]
     );
 
     if (users.length === 0) {
-      return res.status(400).json({ error: 'Token inválido o expirado' });
+      return res.status(400).json({ 
+        error: 'Código inválido o expirado' 
+      });
     }
 
+    // Actualizar contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await db.query(
@@ -248,7 +269,7 @@ exports.resetPassword = async (req, res) => {
       [hashedPassword, users[0].id]
     );
 
-    console.log('✅ Contraseña reseteada para usuario:', users[0].email);
+    console.log('✅ Contraseña reseteada para:', email);
     res.json({ message: 'Contraseña actualizada exitosamente' });
 
   } catch (error) {

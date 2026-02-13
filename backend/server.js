@@ -4,9 +4,10 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const animeRoutes = require('./routes/animeRoutes');
-const scheduleRoutes = require('./routes/scheduleRoutes'); // 🆕 NUEVO
+const scheduleRoutes = require('./routes/scheduleRoutes');
+const pushRoutes = require('./routes/pushRoutes'); // 🆕 NUEVO
 const initDatabase = require('./initDatabase');
-const { scheduleNotifications } = require('./jobs/notificationScheduler'); // 🆕 NUEVO
+const { scheduleNotifications } = require('./jobs/notificationScheduler');
 
 const app = express();
 
@@ -31,14 +32,16 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       animes: '/api/animes',
-      schedules: '/api/schedules' // 🆕 NUEVO
+      schedules: '/api/schedules',
+      push: '/api/push' // 🆕 NUEVO
     }
   });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/animes', animeRoutes);
-app.use('/api/schedules', scheduleRoutes); // 🆕 NUEVO
+app.use('/api/schedules', scheduleRoutes);
+app.use('/api/push', pushRoutes); // 🆕 NUEVO
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });

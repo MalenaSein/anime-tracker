@@ -9,28 +9,39 @@ const jwt = require('jsonwebtoken');
 const authMiddleware = (req, res, next) => {
   try {
     // 1. Obtenemos el token del header Authorization
-    // Formato: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     const authHeader = req.headers.authorization;
     
+    // 🔍 DEBUG: Ver qué está llegando
+    console.log('🔍 Authorization header:', authHeader ? authHeader.substring(0, 30) + '...' : 'NO ENVIADO');
+    
     if (!authHeader) {
+      console.log('❌ No hay header de autorización');
       return res.status(401).json({ error: 'No se proporcionó token de autenticación' });
     }
 
     // 2. Extraemos solo el token (quitamos la palabra "Bearer ")
-    const token = authHeader.split(' ')[1];
+    const parts = authHeader.split(' ');
+    
+    if (parts.length !== 2) {
+      console.log('❌ Formato incorrecto. Tiene', parts.length, 'partes');
+      return res.status(401).json({ error: 'Formato de token inválido' });
+    }
+    
+    const token = parts[1];
 
-    if (!token) {
+    if (!token || token === 'null' || token === 'undefined') {
+      console.log('❌ Token vacío o null');
       return res.status(401).json({ error: 'Token inválido' });
     }
+    
+    // 🔍 DEBUG: Ver inicio del token
+    console.log('🔑 Token (primeros 30 chars):', token.substring(0, 30) + '...');
 
     // 3. Verificamos que el token sea válido
-    // jwt.verify desencripta el token usando JWT_SECRET
-    // Si el token expiró o fue modificado, lanza un error
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 4. Guardamos los datos del usuario en req.user
-    // Ahora cualquier función que se ejecute después tendrá acceso a req.user
-    req.user = decoded;  // { id: 1, username: 'otaku123' }
+    req.user = decoded;
 
     console.log('✅ Usuario autenticado:', decoded.username);
 
@@ -39,10 +50,22 @@ const authMiddleware = (req, res, next) => {
 
   } catch (error) {
     console.error('❌ Error de autenticación:', error.message);
+    console.error('   Tipo de error:', error.name);
     
     // Si el token expiró
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expirado, por favor inicia sesión nuevamente' });
+      return res.status(401).json({ 
+        error: 'Token expirado, por favor inicia sesión nuevamente',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    // Si el token está malformado
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        error: 'Token corrupto. Cierra sesión e inicia sesión nuevamente',
+        code: 'TOKEN_MALFORMED'
+      });
     }
     
     return res.status(401).json({ error: 'Token inválido' });

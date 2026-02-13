@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const db = require('../config/database');
-const { sendEpisodeNotification } = require('../services/emailService');
+const { sendEpisodeNotification } = require('../services/pushNotificationService');
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -72,9 +72,9 @@ const scheduleNotifications = () => {
               schedule.anime_nombre,
               episodeTime
             );
-            console.log(`✅ Email enviado para: ${schedule.anime_nombre}`);
+            console.log(`✅ Notificación enviada para: ${schedule.anime_nombre}`);
           } catch (error) {
-            console.error(`❌ Error enviando email para ${schedule.anime_nombre}:`, error.message);
+            console.error(`❌ Error enviando notificación para ${schedule.anime_nombre}:`, error.message);
           }
         }
       }

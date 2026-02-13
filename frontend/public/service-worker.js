@@ -177,3 +177,87 @@ self.addEventListener('message', (event) => {
 });
 
 console.log('🚀 Service Worker cargado');
+
+// ============================================
+// PUSH NOTIFICATIONS - Recibir notificaciones
+// ============================================
+self.addEventListener('push', (event) => {
+  console.log('📩 Notificación push recibida');
+
+  let data = {
+    title: 'Nueva notificación',
+    body: 'Tienes una actualización',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png'
+  };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (error) {
+      console.error('Error parseando notificación:', error);
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icons/icon-192x192.png',
+    badge: data.badge || '/icons/icon-192x192.png',
+    tag: data.tag || 'anime-notification',
+    data: data.data || {},
+    actions: data.actions || [
+      { action: 'open', title: 'Ver ahora', icon: '/icons/icon-192x192.png' },
+      { action: 'close', title: 'Cerrar' }
+    ],
+    vibrate: [200, 100, 200],
+    requireInteraction: true, // No se cierra automáticamente
+    silent: false
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// ============================================
+// NOTIFICATION CLICK - Manejar clics
+// ============================================
+self.addEventListener('notificationclick', (event) => {
+  console.log('🖱️ Click en notificación:', event.action);
+
+  event.notification.close();
+
+  if (event.action === 'open') {
+    // Abrir la app
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url || '/')
+    );
+  } else if (event.action === 'close') {
+    // Solo cerrar (ya se cerró arriba)
+    return;
+  } else {
+    // Click en el cuerpo de la notificación
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then((clientList) => {
+          // Si ya hay una ventana abierta, enfocarla
+          for (const client of clientList) {
+            if (client.url === '/' && 'focus' in client) {
+              return client.focus();
+            }
+          }
+          // Si no, abrir nueva ventana
+          if (clients.openWindow) {
+            return clients.openWindow('/');
+          }
+        })
+    );
+  }
+});
+
+// ============================================
+// NOTIFICATION CLOSE - Cuando se cierra
+// ============================================
+self.addEventListener('notificationclose', (event) => {
+  console.log('❌ Notificación cerrada:', event.notification.tag);
+});
