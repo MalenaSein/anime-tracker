@@ -3,21 +3,50 @@ const nodemailer = require('nodemailer');
 // ============================================
 // CONFIGURACIÓN DEL TRANSPORTER DE EMAIL
 // ============================================
+
+// Verificar que las variables de entorno existen
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+  console.error('❌ ERROR CRÍTICO: Faltan variables de entorno para email');
+  console.error('   EMAIL_USER:', process.env.EMAIL_USER ? '✅ Configurado' : '❌ NO configurado');
+  console.error('   EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '✅ Configurado' : '❌ NO configurado');
+  console.error('   SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com (default)');
+  console.error('   SMTP_PORT:', process.env.SMTP_PORT || '587 (default)');
+}
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false,
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: false, // true para puerto 465, false para otros
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  }
+  },
+  // Agregar opciones de debug
+  debug: true, // Mostrar logs detallados
+  logger: true // Activar logger
 });
 
+// Verificar conexión al iniciar
 transporter.verify(function(error, success) {
   if (error) {
-    console.log('❌ Error en configuración de email:', error);
+    console.error('❌ Error en configuración de email:', error.message);
+    console.error('   Detalles completos:', error);
+    
+    // Diagnosticar el tipo de error
+    if (error.code === 'EAUTH') {
+      console.error('   💡 SOLUCIÓN: Verifica tu EMAIL_USER y EMAIL_PASSWORD');
+      console.error('   💡 Si usas Gmail, necesitas una "App Password"');
+      console.error('   💡 https://myaccount.google.com/apppasswords');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('   💡 SOLUCIÓN: Problema de conexión. Verifica SMTP_HOST y SMTP_PORT');
+    } else if (error.code === 'ESOCKET') {
+      console.error('   💡 SOLUCIÓN: Puerto bloqueado. Prueba con puerto 465 (secure: true)');
+    }
   } else {
     console.log('✅ Servidor de email listo para enviar notificaciones');
+    console.log(`   Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
+    console.log(`   Port: ${process.env.SMTP_PORT || '587'}`);
+    console.log(`   User: ${process.env.EMAIL_USER}`);
   }
 });
 
@@ -25,6 +54,8 @@ transporter.verify(function(error, success) {
 // ENVIAR NOTIFICACIÓN DE NUEVO EPISODIO
 // ============================================
 const sendEpisodeNotification = async (userEmail, animeName, episodeTime) => {
+  console.log(`📧 Intentando enviar email a: ${userEmail}`);
+  
   const mailOptions = {
     from: process.env.EMAIL_FROM || '"Anime Tracker" <noreply@animetracker.com>',
     to: userEmail,
@@ -94,19 +125,34 @@ Para gestionar tus notificaciones, accede a tu cuenta de Anime Tracker.
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email de episodio enviado a ${userEmail} para ${animeName}`);
+    console.log(`   Message ID: ${info.messageId}`);
+    console.log(`   Response: ${info.response}`);
     return true;
   } catch (error) {
-    console.error('❌ Error al enviar email de episodio:', error);
+    console.error(`❌ Error al enviar email de episodio:`, error.message);
+    console.error(`   Para: ${userEmail}`);
+    console.error(`   Anime: ${animeName}`);
+    console.error(`   Error completo:`, error);
+    
+    // Diagnosticar error específico
+    if (error.code === 'EAUTH') {
+      console.error('   💡 Error de autenticación. Verifica EMAIL_USER y EMAIL_PASSWORD');
+    } else if (error.responseCode === 535) {
+      console.error('   💡 Gmail bloqueó el login. Usa una App Password');
+    }
+    
     throw error;
   }
 };
 
 // ============================================
-// ENVIAR EMAIL DE RECUPERACIÓN DE CONTRASEÑA ✨ NUEVO
+// ENVIAR EMAIL DE RECUPERACIÓN DE CONTRASEÑA
 // ============================================
 const sendPasswordResetEmail = async (userEmail, username, resetUrl) => {
+  console.log(`📧 Intentando enviar email de recuperación a: ${userEmail}`);
+  
   const mailOptions = {
     from: process.env.EMAIL_FROM || '"Anime Tracker" <noreply@animetracker.com>',
     to: userEmail,
@@ -174,11 +220,14 @@ Este enlace es válido por 1 hora. Si no solicitaste este cambio, ignorá este e
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email de recuperación enviado a ${userEmail}`);
+    console.log(`   Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error('❌ Error al enviar email de recuperación:', error);
+    console.error(`❌ Error al enviar email de recuperación:`, error.message);
+    console.error(`   Para: ${userEmail}`);
+    console.error(`   Error completo:`, error);
     throw error;
   }
 };
