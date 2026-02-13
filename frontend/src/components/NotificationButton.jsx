@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff, BellRing } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Eliminar /api del final si viene incluido en REACT_APP_API_URL
+const _RAW_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = _RAW_URL.endsWith('/api') ? _RAW_URL.slice(0, -4) : _RAW_URL;
 // PUBLIC_URL es /anime-tracker en GitHub Pages, '' en localhost
 const SW_URL = (process.env.PUBLIC_URL || '') + '/sw-anime.js';
 
