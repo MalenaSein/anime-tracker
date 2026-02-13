@@ -16,7 +16,8 @@ const ForgotPassword = ({ onBack }) => {
   const [newPin, setNewPin] = useState('');   // para usuarios sin PIN que van a crearlo
   const [confirmNewPin, setConfirmNewPin] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+  const _rawUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_URL = _rawUrl.endsWith('/api') ? _rawUrl : _rawUrl + '/api';
 
   // ============================================
   // PASO 1: verificar si el email existe y tiene PIN
