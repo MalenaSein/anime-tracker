@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar';
 import Filters from '../components/Filters';
 import Statistics from '../components/Statistics';
 import ScheduleCalendar from '../components/ScheduleCalendar';
+import MusicPlayer from '../components/MusicPlayer';
 
 const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [animes, setAnimes] = useState([]);
@@ -344,6 +345,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
           onSelect={addNewSeason}
         />
       </div>
+      <MusicPlayer />
     </div>
   );
 };
