@@ -19,12 +19,14 @@ const scheduleNotifications = () => {
   
   cron.schedule('* * * * *', async () => {
     try {
+      // Obtener hora actual en Argentina (UTC-3)
       const now = new Date();
+      const argentinaTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
       
       // Convertir día de la semana (Domingo=0 -> Domingo=6)
-      const currentDay = (now.getDay() + 6) % 7; // Lunes=0, Domingo=6
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
+      const currentDay = (argentinaTime.getDay() + 6) % 7; // Lunes=0, Domingo=6
+      const currentHour = argentinaTime.getHours();
+      const currentMinute = argentinaTime.getMinutes();
       
       // 🆕 Calcular la hora y minuto siguiente (en 1 minuto)
       let nextMinute = currentMinute + 1;
@@ -43,7 +45,7 @@ const scheduleNotifications = () => {
       // Por ejemplo, si son 13:29, buscar episodios para 13:30
       // Si son 13:14, buscar episodios para 13:15
       
-      console.log(`🕐 Son las ${currentHour}:${currentMinute.toString().padStart(2, '0')} - Verificando horarios para las ${nextHour}:${nextMinute.toString().padStart(2, '0')}...`);
+      console.log(`🕐 Son las ${currentHour}:${currentMinute.toString().padStart(2, '0')} (Argentina) - Verificando horarios para las ${nextHour}:${nextMinute.toString().padStart(2, '0')}...`);
       
       // Buscar horarios para la siguiente hora y minuto exactos
       const [schedulesToNotify] = await db.query(

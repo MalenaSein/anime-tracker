@@ -14,16 +14,23 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  host: process.env.SMTP_HOST || 'in-v3.mailjet.com',
   port: parseInt(process.env.SMTP_PORT) || 465,
-  secure: true, // true para puerto 465, false para otros
+  secure: true, // true para puerto 465 (SSL directo)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
-  // Agregar opciones de debug
-  debug: true, // Mostrar logs detallados
-  logger: true // Activar logger
+  // Opciones adicionales
+  tls: {
+    rejectUnauthorized: false // Solo en desarrollo/producción con certificados autofirmados
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 20000,
+  // Debug
+  debug: true,
+  logger: true
 });
 
 // Verificar conexión al iniciar
