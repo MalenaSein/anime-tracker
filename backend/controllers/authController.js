@@ -1,31 +1,38 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
-const { sendPasswordResetEmail } = require('../services/pushNotificationService');
 const crypto = require('crypto');
+
+// Helper: hashear PIN
+const hashPin = (pin) => crypto.createHash('sha256').update(pin).digest('hex');
 
 // ============================================
 // REGISTRO DE USUARIO
 // ============================================
 exports.register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-    console.log('🔐 Intento de registro:', { username, email });
+    const { username, email, password, recovery_pin } = req.body;
+    console.log('📝 Intento de registro:', { username, email });
+
+    // Validar PIN
+    if (!recovery_pin || !/^\d{4}$/.test(recovery_pin)) {
+      return res.status(400).json({ error: 'El PIN de recuperación debe ser 4 dígitos numéricos' });
+    }
 
     const [existingUser] = await db.query(
       'SELECT * FROM usuarios WHERE email = ? OR username = ?',
       [email, username]
     );
-
     if (existingUser.length > 0) {
       return res.status(400).json({ error: 'Usuario o email ya existe' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPin = hashPin(recovery_pin);
 
     const [result] = await db.query(
-      'INSERT INTO usuarios (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword]
+      'INSERT INTO usuarios (username, email, password, recovery_pin) VALUES (?, ?, ?, ?)',
+      [username, email, hashedPassword, hashedPin]
     );
 
     const token = jwt.sign(
@@ -54,18 +61,13 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     console.log('🔐 Intento de login:', email);
 
-    const [users] = await db.query(
-      'SELECT * FROM usuarios WHERE email = ?',
-      [email]
-    );
-
+    const [users] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
     if (users.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const user = users[0];
     const isValidPassword = await bcrypt.compare(password, user.password);
-
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
@@ -89,7 +91,7 @@ exports.login = async (req, res) => {
 };
 
 // ============================================
-// CAMBIAR NOMBRE DE USUARIO ✨ NUEVO
+// CAMBIAR NOMBRE DE USUARIO
 // ============================================
 exports.changeUsername = async (req, res) => {
   try {
@@ -100,25 +102,18 @@ exports.changeUsername = async (req, res) => {
       return res.status(400).json({ error: 'El nombre de usuario debe tener al menos 3 caracteres' });
     }
 
-    // Verificar que no esté en uso por otro usuario
     const [existing] = await db.query(
       'SELECT id FROM usuarios WHERE username = ? AND id != ?',
       [newUsername.trim(), userId]
     );
-
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
     }
 
-    await db.query(
-      'UPDATE usuarios SET username = ? WHERE id = ?',
-      [newUsername.trim(), userId]
-    );
+    await db.query('UPDATE usuarios SET username = ? WHERE id = ?', [newUsername.trim(), userId]);
 
-    // Generar nuevo token con el username actualizado
     const [updatedUser] = await db.query(
-      'SELECT id, username, email FROM usuarios WHERE id = ?',
-      [userId]
+      'SELECT id, username, email FROM usuarios WHERE id = ?', [userId]
     );
 
     const newToken = jwt.sign(
@@ -127,13 +122,7 @@ exports.changeUsername = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Username actualizado para usuario ID:', userId);
-    res.json({
-      message: 'Nombre de usuario actualizado exitosamente',
-      token: newToken,
-      user: updatedUser[0]
-    });
-
+    res.json({ message: 'Nombre actualizado', token: newToken, user: updatedUser[0] });
   } catch (error) {
     console.error('❌ Error cambiando username:', error);
     res.status(500).json({ error: error.message });
@@ -141,34 +130,21 @@ exports.changeUsername = async (req, res) => {
 };
 
 // ============================================
-// ELIMINAR CUENTA ✨ NUEVO
+// ELIMINAR CUENTA
 // ============================================
 exports.deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
     const { password } = req.body;
 
-    // Verificar contraseña antes de eliminar
-    const [users] = await db.query(
-      'SELECT * FROM usuarios WHERE id = ?',
-      [userId]
-    );
-
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
+    const [users] = await db.query('SELECT * FROM usuarios WHERE id = ?', [userId]);
+    if (users.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const isValidPassword = await bcrypt.compare(password, users[0].password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Contraseña incorrecta' });
-    }
+    if (!isValidPassword) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
-    // Eliminar usuario (los animes se eliminan en cascada por el FK)
     await db.query('DELETE FROM usuarios WHERE id = ?', [userId]);
-
-    console.log('✅ Cuenta eliminada para usuario ID:', userId);
     res.json({ message: 'Cuenta eliminada exitosamente' });
-
   } catch (error) {
     console.error('❌ Error eliminando cuenta:', error);
     res.status(500).json({ error: error.message });
@@ -176,104 +152,139 @@ exports.deleteAccount = async (req, res) => {
 };
 
 // ============================================
-// SOLICITAR RECUPERACIÓN DE CONTRASEÑA ✨ NUEVO
+// VERIFICAR SI EMAIL EXISTE Y TIENE PIN
+// POST /api/auth/check-recovery
 // ============================================
-exports.requestPasswordReset = async (req, res) => {
+exports.checkRecovery = async (req, res) => {
   try {
     const { email } = req.body;
 
     const [users] = await db.query(
-      'SELECT * FROM usuarios WHERE email = ?',
-      [email]
+      'SELECT id, recovery_pin FROM usuarios WHERE email = ?', [email]
     );
 
-    // Siempre responder igual por seguridad
     if (users.length === 0) {
-      return res.json({ 
-        message: 'Si el email existe, se generó un código',
-        codeGenerated: false 
-      });
+      // No revelamos si existe o no por seguridad, pero en este caso
+      // el flujo necesita saberlo para mostrar el mensaje correcto
+      return res.json({ exists: false });
     }
 
-    const user = users[0];
-
-    // Generar código de 6 dígitos
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora
-
-    // Hashear el código antes de guardarlo
-    const hashedCode = crypto.createHash('sha256').update(resetCode).digest('hex');
-
-    await db.query(
-      'UPDATE usuarios SET reset_token = ?, reset_token_expiry = ? WHERE id = ?',
-      [hashedCode, resetTokenExpiry, user.id]
-    );
-
-    console.log(`📋 Código de recuperación para ${email}: ${resetCode}`);
-    console.log(`   Username: ${user.username}`);
-
-    // ✅ DEVOLVER EL CÓDIGO AL FRONTEND
-    res.json({ 
-      message: 'Código de recuperación generado',
-      codeGenerated: true,
-      resetCode: resetCode,  // ← El frontend lo mostrará
-      username: user.username,
-      expiresIn: '1 hora'
+    res.json({
+      exists: true,
+      hasPin: !!users[0].recovery_pin
     });
-
   } catch (error) {
-    console.error('❌ Error en solicitud de reset:', error);
+    console.error('❌ Error en check-recovery:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
 // ============================================
-// RESETEAR CONTRASEÑA CON CÓDIGO ✨ NUEVO
+// CAMBIAR CONTRASEÑA CON PIN
+// POST /api/auth/reset-password-pin
 // ============================================
-exports.resetPassword = async (req, res) => {
+exports.resetPasswordWithPin = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, pin, newPassword } = req.body;
 
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({ error: 'PIN inválido' });
+    }
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ 
-        error: 'La contraseña debe tener al menos 6 caracteres' 
-      });
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
-    if (!code || code.length !== 6) {
-      return res.status(400).json({ 
-        error: 'El código debe tener 6 dígitos' 
-      });
-    }
+    const hashedPin = hashPin(pin);
 
-    // Hashear el código ingresado
-    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
-
-    // Buscar usuario con código válido
     const [users] = await db.query(
-      'SELECT * FROM usuarios WHERE email = ? AND reset_token = ? AND reset_token_expiry > NOW()',
-      [email, hashedCode]
+      'SELECT id FROM usuarios WHERE email = ? AND recovery_pin = ?',
+      [email, hashedPin]
     );
 
     if (users.length === 0) {
-      return res.status(400).json({ 
-        error: 'Código inválido o expirado' 
-      });
+      return res.status(400).json({ error: 'PIN incorrecto' });
     }
 
-    // Actualizar contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE usuarios SET password = ? WHERE id = ?', [hashedPassword, users[0].id]);
 
-    await db.query(
-      'UPDATE usuarios SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?',
-      [hashedPassword, users[0].id]
+    console.log('✅ Contraseña reseteada con PIN para:', email);
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (error) {
+    console.error('❌ Error reseteando contraseña con PIN:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ============================================
+// CREAR PIN PARA USUARIO SIN PIN (una sola vez)
+// POST /api/auth/setup-pin
+// Requiere: email + username exacto + nuevo PIN
+// ============================================
+exports.setupPin = async (req, res) => {
+  try {
+    const { email, username, pin } = req.body;
+
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({ error: 'El PIN debe ser 4 dígitos numéricos' });
+    }
+
+    // Verificar que email + username coincidan Y que no tenga PIN
+    const [users] = await db.query(
+      'SELECT id, recovery_pin FROM usuarios WHERE email = ? AND username = ?',
+      [email, username]
     );
 
-    console.log('✅ Contraseña reseteada para:', email);
-    res.json({ message: 'Contraseña actualizada exitosamente' });
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'Email o nombre de usuario incorrectos' });
+    }
 
+    if (users[0].recovery_pin) {
+      return res.status(400).json({ error: 'Esta cuenta ya tiene un PIN configurado' });
+    }
+
+    const hashedPin = hashPin(pin);
+    await db.query('UPDATE usuarios SET recovery_pin = ? WHERE id = ?', [hashedPin, users[0].id]);
+
+    console.log('✅ PIN configurado para usuario ID:', users[0].id);
+    res.json({ message: 'PIN configurado exitosamente' });
   } catch (error) {
-    console.error('❌ Error reseteando contraseña:', error);
+    console.error('❌ Error configurando PIN:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ============================================
+// CAMBIAR PIN (desde perfil, autenticado)
+// PUT /api/auth/change-pin
+// ============================================
+exports.changePin = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPin, newPin } = req.body;
+
+    if (!newPin || !/^\d{4}$/.test(newPin)) {
+      return res.status(400).json({ error: 'El nuevo PIN debe ser 4 dígitos' });
+    }
+
+    const [users] = await db.query('SELECT recovery_pin FROM usuarios WHERE id = ?', [userId]);
+    if (users.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Si ya tiene PIN, verificar el actual
+    if (users[0].recovery_pin) {
+      if (!currentPin) return res.status(400).json({ error: 'Debés ingresar tu PIN actual' });
+      const hashedCurrent = hashPin(currentPin);
+      if (hashedCurrent !== users[0].recovery_pin) {
+        return res.status(400).json({ error: 'PIN actual incorrecto' });
+      }
+    }
+
+    const hashedNewPin = hashPin(newPin);
+    await db.query('UPDATE usuarios SET recovery_pin = ? WHERE id = ?', [hashedNewPin, userId]);
+
+    res.json({ message: 'PIN actualizado exitosamente' });
+  } catch (error) {
+    console.error('❌ Error cambiando PIN:', error);
     res.status(500).json({ error: error.message });
   }
 };

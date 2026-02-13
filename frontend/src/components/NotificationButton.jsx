@@ -1,193 +1,202 @@
-// ============================================
-// COMPONENTE: Botón de Notificaciones
-// ============================================
-// Guardar como: src/components/NotificationButton.jsx
+import React, { useState, useEffect } from 'react';
+import { Bell, BellOff, BellRing } from 'lucide-react';
 
-import React from 'react';
-import usePushNotifications from '../hooks/usePushNotifications';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-const NotificationButton = () => {
-  const { 
-    isSupported, 
-    permission, 
-    isSubscribed, 
-    subscribe, 
-    unsubscribe 
-  } = usePushNotifications();
+// Convierte la clave VAPID de base64 a Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
-  // Si el navegador no soporta notificaciones
-  if (!isSupported) {
-    return (
-      <div className="notification-warning">
-        <p>⚠️ Tu navegador no soporta notificaciones push</p>
-        <small>Prueba con Chrome, Firefox o Edge</small>
-      </div>
-    );
-  }
+const NotificationButton = ({ isMobile = false }) => {
+  const [supported, setSupported] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+  const [permission, setPermission] = useState('default');
+  const [loading, setLoading] = useState(false);
+  const [tooltip, setTooltip] = useState('');
 
-  // Si el usuario bloqueó las notificaciones
+  useEffect(() => {
+    const ok = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+    setSupported(ok);
+    if (ok) {
+      setPermission(Notification.permission);
+      checkExistingSubscription();
+    }
+  }, []);
+
+  const checkExistingSubscription = async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      setSubscribed(!!sub);
+    } catch (e) {
+      console.error('Error verificando suscripción:', e);
+    }
+  };
+
+  const handleToggle = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      if (subscribed) {
+        await unsubscribe();
+      } else {
+        await subscribe();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const subscribe = async () => {
+    // 1. Pedir permiso
+    const perm = await Notification.requestPermission();
+    setPermission(perm);
+    if (perm !== 'granted') {
+      alert('Para recibir notificaciones de nuevos episodios, debes permitirlas en tu navegador.');
+      return;
+    }
+
+    // 2. Registrar service worker
+    let reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw-anime.js');
+    }
+    await navigator.serviceWorker.ready;
+
+    // 3. Obtener clave VAPID del backend
+    const resp = await fetch(`${API_URL}/api/push/vapid-public-key`);
+    if (!resp.ok) throw new Error('No se pudo obtener la clave del servidor');
+    const { publicKey } = await resp.json();
+    if (!publicKey) throw new Error('Clave VAPID no configurada en el servidor');
+
+    // 4. Suscribirse
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    // 5. Guardar en backend
+    const token = localStorage.getItem('token');
+    const saveResp = await fetch(`${API_URL}/api/push/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(sub)
+    });
+    if (!saveResp.ok) {
+      const err = await saveResp.json();
+      throw new Error(err.error || 'Error guardando suscripción');
+    }
+
+    setSubscribed(true);
+    console.log('✅ Suscripción activada');
+  };
+
+  const unsubscribe = async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) { setSubscribed(false); return; }
+
+    await sub.unsubscribe();
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      await fetch(`${API_URL}/api/push/unsubscribe`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      });
+    }
+
+    setSubscribed(false);
+    console.log('✅ Suscripción cancelada');
+  };
+
+  if (!supported) return null;
+
+  // Si el permiso fue denegado definitivamente
   if (permission === 'denied') {
     return (
-      <div className="notification-blocked">
-        <p>🔕 Notificaciones bloqueadas</p>
-        <small>
-          Para activarlas, ve a la configuración de tu navegador y permite las notificaciones para este sitio.
-        </small>
+      <div style={{ position: 'relative' }}>
+        <button
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            background: 'transparent', border: '1px solid #374151',
+            borderRadius: '0.5rem', padding: isMobile ? '0.5rem' : '0.5rem 0.75rem',
+            color: '#6b7280', cursor: 'not-allowed', fontSize: '0.8rem'
+          }}
+          title="Notificaciones bloqueadas en tu navegador. Ve a Configuración del sitio para habilitarlas."
+          disabled
+        >
+          <BellOff size={16} />
+          {!isMobile && <span>Bloqueadas</span>}
+        </button>
       </div>
     );
   }
 
-  return (
-    <div className="notification-button-container">
-      <h3>🔔 Notificaciones de episodios</h3>
-      <p className="description">
-        Recibe una notificación 1 minuto antes de que salga un nuevo episodio
-      </p>
+  const isActive = subscribed && permission === 'granted';
 
-      <div className="button-group">
-        {isSubscribed ? (
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={handleToggle}
+        disabled={loading}
+        title={isActive ? 'Desactivar notificaciones de episodios' : 'Activar notificaciones de episodios'}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.4rem',
+          background: isActive ? 'rgba(99,102,241,0.15)' : 'transparent',
+          border: `1px solid ${isActive ? '#6366f1' : '#374151'}`,
+          borderRadius: '0.5rem',
+          padding: isMobile ? '0.5rem' : '0.5rem 0.75rem',
+          color: isActive ? '#818cf8' : '#9ca3af',
+          cursor: loading ? 'wait' : 'pointer',
+          fontSize: '0.8rem', fontWeight: '500',
+          transition: 'all 0.2s',
+          whiteSpace: 'nowrap'
+        }}
+        onMouseOver={(e) => {
+          if (!loading) e.currentTarget.style.borderColor = isActive ? '#818cf8' : '#6b7280';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.borderColor = isActive ? '#6366f1' : '#374151';
+        }}
+      >
+        {loading ? (
           <>
-            <div className="status-active">
-              <span className="indicator">✅</span>
-              <span>Notificaciones activadas</span>
-            </div>
-            <button 
-              onClick={unsubscribe} 
-              className="btn btn-secondary"
-            >
-              🔕 Desactivar
-            </button>
+            <span style={{
+              width: 16, height: 16, border: '2px solid #6366f1',
+              borderTopColor: 'transparent', borderRadius: '50%',
+              display: 'inline-block', animation: 'spin 0.7s linear infinite'
+            }} />
+            {!isMobile && <span>...</span>}
+          </>
+        ) : isActive ? (
+          <>
+            <BellRing size={16} />
+            {!isMobile && <span>Notif. ON</span>}
           </>
         ) : (
           <>
-            <button 
-              onClick={subscribe} 
-              className="btn btn-primary"
-            >
-              🔔 Activar notificaciones
-            </button>
-            <p className="hint">
-              El navegador te pedirá permiso
-            </p>
+            <Bell size={16} />
+            {!isMobile && <span>Notif. OFF</span>}
           </>
         )}
-      </div>
+      </button>
 
-      <style jsx>{`
-        .notification-button-container {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          margin: 20px 0;
-        }
-
-        h3 {
-          margin: 0 0 8px 0;
-          color: #333;
-          font-size: 20px;
-        }
-
-        .description {
-          color: #666;
-          margin: 0 0 20px 0;
-          font-size: 14px;
-        }
-
-        .button-group {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .status-active {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px;
-          background: #d4edda;
-          border: 1px solid #c3e6cb;
-          border-radius: 8px;
-          color: #155724;
-          font-weight: 500;
-        }
-
-        .indicator {
-          font-size: 18px;
-        }
-
-        .btn {
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .btn-primary {
-          background: #667eea;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: #5568d3;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-        }
-
-        .btn-secondary:hover {
-          background: #5a6268;
-        }
-
-        .hint {
-          color: #888;
-          font-size: 13px;
-          margin: 0;
-          text-align: center;
-        }
-
-        .notification-warning,
-        .notification-blocked {
-          background: #fff3cd;
-          border: 1px solid #ffc107;
-          padding: 16px;
-          border-radius: 8px;
-          color: #856404;
-        }
-
-        .notification-warning p,
-        .notification-blocked p {
-          margin: 0 0 8px 0;
-          font-weight: 500;
-        }
-
-        .notification-warning small,
-        .notification-blocked small {
-          display: block;
-          color: #856404;
-          opacity: 0.8;
-        }
-
-        @media (max-width: 768px) {
-          .notification-button-container {
-            padding: 16px;
-          }
-
-          h3 {
-            font-size: 18px;
-          }
-
-          .btn {
-            font-size: 14px;
-          }
-        }
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

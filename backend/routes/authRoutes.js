@@ -9,16 +9,24 @@ router.post('/register', authController.register);
 // POST /api/auth/login
 router.post('/login', authController.login);
 
-// PUT /api/auth/username  ✨ NUEVO - Cambiar nombre de usuario
+// PUT /api/auth/username — Cambiar nombre de usuario (autenticado)
 router.put('/username', authMiddleware, authController.changeUsername);
 
-// DELETE /api/auth/account  ✨ NUEVO - Eliminar cuenta
+// DELETE /api/auth/account — Eliminar cuenta (autenticado)
 router.delete('/account', authMiddleware, authController.deleteAccount);
 
-// POST /api/auth/forgot-password  ✨ NUEVO - Solicitar recuperación
-router.post('/forgot-password', authController.requestPasswordReset);
+// ── Recuperación con PIN ──────────────────────────────────────
 
-// POST /api/auth/reset-password  ✨ NUEVO - Resetear con token
-router.post('/reset-password', authController.resetPassword);
+// POST /api/auth/check-recovery — Verificar si email existe y tiene PIN
+router.post('/check-recovery', authController.checkRecovery);
+
+// POST /api/auth/reset-password-pin — Cambiar contraseña usando el PIN
+router.post('/reset-password-pin', authController.resetPasswordWithPin);
+
+// POST /api/auth/setup-pin — Crear PIN (usuarios sin PIN, una sola vez, requiere usuario+email)
+router.post('/setup-pin', authController.setupPin);
+
+// PUT /api/auth/change-pin — Cambiar PIN desde perfil (autenticado)
+router.put('/change-pin', authMiddleware, authController.changePin);
 
 module.exports = router;

@@ -4,12 +4,12 @@ import { authAPI } from '../services/api';
 
 const Register = ({ onRegister, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
-    username: '', email: '', password: '', confirmPassword: ''
+    username: '', email: '', password: '', confirmPassword: '', recovery_pin: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);       // ✨ NUEVO
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✨ NUEVO
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +21,10 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
     }
     if (formData.password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    if (!/^\d{4}$/.test(formData.recovery_pin)) {
+      setError('El PIN de recuperación debe ser exactamente 4 dígitos numéricos');
       return;
     }
 
@@ -83,6 +87,11 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
       cursor: 'pointer', color: '#6b7280', display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: '0.25rem'
     },
+    pinBox: {
+      background: '#111827', border: '1px solid #4c1d95',
+      borderRadius: '0.75rem', padding: '1rem', marginTop: '0.25rem'
+    },
+    pinHint: { color: '#a78bfa', fontSize: '0.8rem', marginTop: '0.5rem', lineHeight: 1.5 },
     button: {
       width: '100%', backgroundColor: loading ? '#4b5563' : '#9333ea',
       color: 'white', padding: '0.875rem', borderRadius: '0.5rem',
@@ -101,7 +110,7 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
       <input
         type={show ? 'text' : 'password'}
         value={value}
-        onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+        onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
         style={styles.inputWithIcon}
         placeholder={placeholder}
         required
@@ -130,7 +139,7 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
             <input
               type="text"
               value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               style={styles.input}
               placeholder="otaku123"
               required
@@ -144,7 +153,7 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               style={styles.input}
               placeholder="tu@email.com"
               required
@@ -153,18 +162,40 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
             />
           </div>
 
-          {/* ✨ Contraseña con ojo */}
           <div style={styles.inputGroup}>
             <label style={styles.label}>Contraseña</label>
             {passwordField('password', formData.password, showPassword,
               () => setShowPassword(!showPassword), '••••••••')}
           </div>
 
-          {/* ✨ Confirmar contraseña con ojo */}
           <div style={styles.inputGroup}>
             <label style={styles.label}>Confirmar Contraseña</label>
             {passwordField('confirmPassword', formData.confirmPassword, showConfirmPassword,
               () => setShowConfirmPassword(!showConfirmPassword), '••••••••')}
+          </div>
+
+          {/* PIN de recuperación */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>🔐 PIN de recuperación (4 dígitos)</label>
+            <div style={styles.pinBox}>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                value={formData.recovery_pin}
+                onChange={(e) => setFormData({ ...formData, recovery_pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                style={{ ...styles.input, letterSpacing: '0.5rem', fontSize: '1.5rem', textAlign: 'center' }}
+                placeholder="0000"
+                required
+                onFocus={(e) => e.target.style.borderColor = '#a78bfa'}
+                onBlur={(e) => e.target.style.borderColor = '#374151'}
+              />
+              <p style={styles.pinHint}>
+                🔒 Usarás este PIN para recuperar tu contraseña si la olvidás.<br />
+                <strong style={{ color: '#f9fafb' }}>¡Guardalo en un lugar seguro!</strong> No se puede recuperar.
+              </p>
+            </div>
           </div>
 
           <button

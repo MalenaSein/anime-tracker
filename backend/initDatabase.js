@@ -27,27 +27,30 @@ async function initDatabase() {
           username VARCHAR(50) NOT NULL UNIQUE,
           email VARCHAR(100) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
+          recovery_pin VARCHAR(255),
           reset_token VARCHAR(255),
           reset_token_expiry DATETIME,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           INDEX idx_email (email),
-          INDEX idx_username (username),
-          INDEX idx_reset_token (reset_token)
+          INDEX idx_username (username)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       console.log('✅ Tabla "usuarios" creada');
     } else {
-      // Agregar columnas de reset si no existen
+      // Migración: agregar recovery_pin si no existe
       const [cols] = await db.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios'
-        AND COLUMN_NAME IN ('reset_token', 'reset_token_expiry')
+        AND COLUMN_NAME IN ('recovery_pin', 'reset_token', 'reset_token_expiry')
       `);
       const colNames = cols.map(c => c.COLUMN_NAME);
 
+      if (!colNames.includes('recovery_pin')) {
+        await db.query(`ALTER TABLE usuarios ADD COLUMN recovery_pin VARCHAR(255) NULL`);
+        console.log('✅ Columna recovery_pin agregada a usuarios');
+      }
       if (!colNames.includes('reset_token')) {
         await db.query(`ALTER TABLE usuarios ADD COLUMN reset_token VARCHAR(255)`);
-        await db.query(`ALTER TABLE usuarios ADD INDEX idx_reset_token (reset_token)`);
         console.log('✅ Columna reset_token agregada a usuarios');
       }
       if (!colNames.includes('reset_token_expiry')) {
@@ -59,7 +62,7 @@ async function initDatabase() {
     }
 
     // ============================================
-    // TABLA ANIMES - con estado 'por_ver' ✨
+    // TABLA ANIMES
     // ============================================
     if (!animesExists) {
       await db.query(`
@@ -80,14 +83,12 @@ async function initDatabase() {
           INDEX idx_estado (estado)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
-      console.log('✅ Tabla "animes" creada con estado "por_ver"');
+      console.log('✅ Tabla "animes" creada');
     } else {
-      // Verificar si el ENUM ya tiene 'por_ver'
       const [enumInfo] = await db.query(`
         SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'animes' AND COLUMN_NAME = 'estado'
       `);
-
       if (enumInfo.length > 0 && !enumInfo[0].COLUMN_TYPE.includes('por_ver')) {
         await db.query(`
           ALTER TABLE animes MODIFY COLUMN estado 
@@ -96,7 +97,6 @@ async function initDatabase() {
         console.log('✅ Estado "por_ver" agregado al ENUM de animes');
       }
 
-      // Verificar columna generos
       const [columns] = await db.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'animes' AND COLUMN_NAME = 'generos'
@@ -138,19 +138,17 @@ async function initDatabase() {
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'schedules' AND COLUMN_NAME = 'minute'
       `);
-
       if (minuteColumn.length === 0) {
         await db.query(`ALTER TABLE schedules ADD COLUMN minute INT NOT NULL DEFAULT 0 AFTER hour`);
         await db.query(`ALTER TABLE schedules DROP INDEX unique_schedule`).catch(() => {});
         await db.query(`ALTER TABLE schedules ADD UNIQUE KEY unique_schedule (user_id, anime_id, day, hour, minute)`);
         console.log('✅ Columna "minute" agregada a schedules');
       }
-
       console.log('✅ Tabla "schedules" verificada');
     }
 
     // ============================================
-    // TABLA PUSH_SUBSCRIPTIONS 🆕 NUEVO
+    // TABLA PUSH_SUBSCRIPTIONS
     // ============================================
     if (!pushSubscriptionsExists) {
       await db.query(`
@@ -172,15 +170,14 @@ async function initDatabase() {
       console.log('✅ Tabla "push_subscriptions" verificada');
     }
 
-    // Stats
     const [userCount] = await db.query('SELECT COUNT(*) as count FROM usuarios');
     const [animeCount] = await db.query('SELECT COUNT(*) as count FROM animes');
     const [scheduleCount] = await db.query('SELECT COUNT(*) as count FROM schedules');
     const [pushCount] = await db.query('SELECT COUNT(*) as count FROM push_subscriptions');
-    
+
     console.log(`📊 Usuarios: ${userCount[0].count} | Animes: ${animeCount[0].count} | Horarios: ${scheduleCount[0].count} | Push: ${pushCount[0].count}`);
     console.log('🎉 Base de datos lista!');
-    
+
   } catch (error) {
     console.error('❌ Error inicializando base de datos:', error.message);
     throw error;

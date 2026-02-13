@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, LogOut, Menu, X, Settings } from 'lucide-react';
 import ProfileModal from './ProfileModal';
-
+import NotificationButton from './NotificationButton';
 const Navbar = ({ user, onLogout, onUserUpdated }) => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -84,6 +84,7 @@ const Navbar = ({ user, onLogout, onUserUpdated }) => {
               <User size={18} style={{ color: '#6366f1' }} />
               <span style={styles.username}>{user.username}</span>
             </div>
+            <NotificationButton isMobile={false} />
             <button
               onClick={() => setShowProfile(true)}
               style={styles.profileButton}
@@ -134,6 +135,10 @@ const Navbar = ({ user, onLogout, onUserUpdated }) => {
         >
           <Settings size={18} /> Editar Perfil
         </button>
+
+        <div style={{ width: '100%' }}>
+          <NotificationButton isMobile={false} />
+        </div>
 
         <button
           onClick={() => { setShowMobileMenu(false); onLogout(); }}
