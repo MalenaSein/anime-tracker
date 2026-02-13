@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Bell, BellOff, BellRing } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// PUBLIC_URL es /anime-tracker en GitHub Pages, '' en localhost
+const SW_URL = (process.env.PUBLIC_URL || '') + '/sw-anime.js';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -49,7 +51,7 @@ const NotificationButton = ({ isMobile = false }) => {
         await doSubscribe();
       }
     } catch (e) {
-      console.error('[Notif] Error en toggle:', e);
+      console.error('[Notif] Error:', e);
       setErrorMsg(e.message);
     } finally {
       setLoading(false);
@@ -57,52 +59,37 @@ const NotificationButton = ({ isMobile = false }) => {
   };
 
   const doSubscribe = async () => {
-    console.log('[Notif] === Iniciando suscripcion ===');
-
-    // 1. Permiso
     console.log('[Notif] 1. Solicitando permiso...');
     const perm = await Notification.requestPermission();
     setPermission(perm);
-    console.log('[Notif] Permiso:', perm);
-    if (perm !== 'granted') {
-      throw new Error('Permiso denegado. Habilitá las notificaciones en la configuración del navegador.');
-    }
+    if (perm !== 'granted') throw new Error('Permiso denegado');
 
-    // 2. Obtener SW registrado
-    console.log('[Notif] 2. Buscando Service Worker...');
-    let reg = await navigator.serviceWorker.getRegistration('/');
+    console.log('[Notif] 2. Buscando SW en:', SW_URL);
+    let reg = await navigator.serviceWorker.getRegistration();
     if (!reg) {
-      console.log('[Notif] SW no encontrado, registrando sw-anime.js...');
-      reg = await navigator.serviceWorker.register('/sw-anime.js');
+      reg = await navigator.serviceWorker.register(SW_URL);
+      console.log('[Notif] SW registrado:', reg.scope);
     }
-    console.log('[Notif] SW encontrado:', reg.scope);
 
-    // 3. Esperar a que el SW esté listo
-    console.log('[Notif] 3. Esperando que SW esté activo...');
+    console.log('[Notif] 3. Esperando SW activo...');
     const readyReg = await navigator.serviceWorker.ready;
-    console.log('[Notif] SW listo:', readyReg.scope);
 
-    // 4. Obtener clave VAPID
-    console.log('[Notif] 4. Obteniendo clave VAPID de:', `${API_URL}/api/push/vapid-public-key`);
+    console.log('[Notif] 4. Obteniendo clave VAPID...');
     const resp = await fetch(`${API_URL}/api/push/vapid-public-key`);
-    console.log('[Notif] Respuesta VAPID status:', resp.status);
-    if (!resp.ok) throw new Error(`Error obteniendo clave VAPID (status ${resp.status})`);
+    if (!resp.ok) throw new Error(`Error VAPID (${resp.status})`);
     const { publicKey } = await resp.json();
-    console.log('[Notif] Clave VAPID recibida:', publicKey ? publicKey.substring(0, 20) + '...' : 'NULL/UNDEFINED');
-    if (!publicKey) throw new Error('El servidor no tiene VAPID_PUBLIC_KEY configurada');
+    console.log('[Notif] Clave VAPID:', publicKey ? publicKey.substring(0,20)+'...' : 'NULL');
+    if (!publicKey) throw new Error('VAPID_PUBLIC_KEY no configurada en el servidor');
 
-    // 5. Crear suscripcion push
-    console.log('[Notif] 5. Creando suscripcion push...');
+    console.log('[Notif] 5. Suscribiendo...');
     const sub = await readyReg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey)
     });
-    console.log('[Notif] Suscripcion creada:', sub.endpoint.substring(0, 50) + '...');
 
-    // 6. Guardar en backend
-    console.log('[Notif] 6. Guardando suscripcion en backend...');
+    console.log('[Notif] 6. Guardando en backend...');
     const token = localStorage.getItem('token');
-    if (!token) throw new Error('No hay sesion iniciada (token null)');
+    if (!token) throw new Error('No hay sesion');
 
     const saveResp = await fetch(`${API_URL}/api/push/subscribe`, {
       method: 'POST',
@@ -112,48 +99,36 @@ const NotificationButton = ({ isMobile = false }) => {
       },
       body: JSON.stringify(sub)
     });
-    console.log('[Notif] Guardado status:', saveResp.status);
-
     if (!saveResp.ok) {
-      const errData = await saveResp.json();
-      throw new Error(`Error guardando: ${errData.error || saveResp.status}`);
+      const err = await saveResp.json();
+      throw new Error(`Error guardando: ${err.error}`);
     }
 
-    const saveData = await saveResp.json();
-    console.log('[Notif] Guardado OK:', saveData);
-
     setSubscribed(true);
-    console.log('[Notif] === Suscripcion completada exitosamente ===');
+    console.log('[Notif] Suscripcion completada!');
   };
 
   const doUnsubscribe = async () => {
-    console.log('[Notif] === Cancelando suscripcion ===');
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (!sub) { setSubscribed(false); return; }
-
     await sub.unsubscribe();
-    console.log('[Notif] Desuscripto del navegador');
-
     const token = localStorage.getItem('token');
     if (token) {
-      const resp = await fetch(`${API_URL}/api/push/unsubscribe`, {
+      await fetch(`${API_URL}/api/push/unsubscribe`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ endpoint: sub.endpoint })
       });
-      console.log('[Notif] Eliminado del backend, status:', resp.status);
     }
     setSubscribed(false);
   };
 
-  if (!supported) {
-    return (
-      <div style={{ fontSize: '0.8rem', color: '#6b7280', padding: '0.5rem' }}>
-        ⚠️ Tu navegador no soporta notificaciones push
-      </div>
-    );
-  }
+  if (!supported) return (
+    <div style={{ fontSize: '0.8rem', color: '#6b7280', padding: '0.5rem' }}>
+      Tu navegador no soporta notificaciones push
+    </div>
+  );
 
   const isActive = subscribed && permission === 'granted';
 
@@ -163,11 +138,8 @@ const NotificationButton = ({ isMobile = false }) => {
         onClick={handleToggle}
         disabled={loading || permission === 'denied'}
         title={
-          permission === 'denied'
-            ? 'Notificaciones bloqueadas en tu navegador'
-            : isActive
-            ? 'Desactivar notificaciones'
-            : 'Activar notificaciones de episodios'
+          permission === 'denied' ? 'Notificaciones bloqueadas en tu navegador' :
+          isActive ? 'Desactivar notificaciones' : 'Activar notificaciones de episodios'
         }
         style={{
           display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -201,16 +173,14 @@ const NotificationButton = ({ isMobile = false }) => {
 
       {permission === 'denied' && (
         <span style={{ fontSize: '0.7rem', color: '#f59e0b', maxWidth: 200 }}>
-          Habilitá notificaciones en config. del navegador
+          Habilita notificaciones en config. del navegador
         </span>
       )}
-
       {errorMsg && (
-        <span style={{ fontSize: '0.7rem', color: '#f87171', maxWidth: 200 }}>
-          ⚠️ {errorMsg}
+        <span style={{ fontSize: '0.7rem', color: '#f87171', maxWidth: 220 }}>
+          {errorMsg}
         </span>
       )}
-
       <style>{`@keyframes nb-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
