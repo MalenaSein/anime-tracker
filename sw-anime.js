@@ -1,72 +1,61 @@
 // ============================================
-// SERVICE WORKER PARA ANIME TRACKER PWA
+// SERVICE WORKER - ANIME TRACKER PWA
+// Fix: rutas corregidas para GitHub Pages (/anime-tracker/)
+// Fix: push notifications funcionan con app cerrada
 // ============================================
 
-const CACHE_NAME = 'anime-tracker-v1';
-const RUNTIME_CACHE = 'anime-tracker-runtime-v1';
-
-// Archivos que se cachearán durante la instalación
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/static/css/main.css',
-  '/static/js/main.js',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-];
+const CACHE_NAME = 'anime-tracker-v2';
+const RUNTIME_CACHE = 'anime-tracker-runtime-v2';
+const BASE_PATH = '/anime-tracker'; // ← Fix crítico para GitHub Pages
 
 // ============================================
-// INSTALACIÓN - Se ejecuta cuando se instala el SW
+// INSTALACIÓN
 // ============================================
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker: Instalando...');
-  
+  console.log('🔧 SW: Instalando...');
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('📦 Service Worker: Precaching archivos');
-        // Cache solo los archivos que existen
+        // Fix: rutas con el base path correcto de GitHub Pages
         return cache.addAll([
-          '/',
-          '/index.html',
-          '/manifest.json'
-        ]);
+          `${BASE_PATH}/`,
+          `${BASE_PATH}/index.html`,
+          `${BASE_PATH}/manifest.json`,
+          `${BASE_PATH}/icons/icon-192x192.png`,
+          `${BASE_PATH}/icons/icon-512x512.png`,
+        ]).catch((err) => {
+          console.warn('⚠️ Algunos archivos no se pudieron cachear:', err);
+        });
       })
       .then(() => {
-        console.log('✅ Service Worker: Instalado correctamente');
-        return self.skipWaiting(); // Activa el SW inmediatamente
-      })
-      .catch((error) => {
-        console.error('❌ Error en instalación:', error);
+        console.log('✅ SW: Instalado');
+        return self.skipWaiting();
       })
   );
 });
 
 // ============================================
-// ACTIVACIÓN - Limpia cachés antiguos
+// ACTIVACIÓN
 // ============================================
 self.addEventListener('activate', (event) => {
-  console.log('🎯 Service Worker: Activando...');
-  
+  console.log('🎯 SW: Activando...');
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((cacheName) => {
-              // Elimina cachés antiguos
-              return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
-            })
-            .map((cacheName) => {
-              console.log('🗑️ Eliminando caché antiguo:', cacheName);
-              return caches.delete(cacheName);
+            .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+            .map((name) => {
+              console.log('🗑️ Eliminando caché viejo:', name);
+              return caches.delete(name);
             })
         );
       })
       .then(() => {
-        console.log('✅ Service Worker: Activado');
-        return self.clients.claim(); // Toma control de todas las páginas
+        console.log('✅ SW: Activado');
+        return self.clients.claim();
       })
   );
 });
@@ -78,14 +67,17 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // ❌ NO cachear requests a la API (backend)
+  // No cachear requests al backend (Render)
   if (url.origin !== location.origin) {
-    // Requests externos (API de Render) - solo red
-    event.respondWith(fetch(request));
+    event.respondWith(fetch(request).catch(() => {
+      return new Response(JSON.stringify({ error: 'Sin conexión' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }));
     return;
   }
 
-  // ✅ Estrategia: Cache First para recursos estáticos
+  // Cache First para estáticos
   if (
     request.destination === 'style' ||
     request.destination === 'script' ||
@@ -96,168 +88,133 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ✅ Estrategia: Network First para HTML
-  if (request.destination === 'document') {
-    event.respondWith(networkFirst(request));
-    return;
-  }
-
-  // Default: Network First
+  // Network First para HTML
   event.respondWith(networkFirst(request));
 });
 
-// ============================================
-// ESTRATEGIA: Cache First (recursos estáticos)
-// ============================================
 async function cacheFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-  
-  if (cached) {
-    console.log('📦 Cache hit:', request.url);
-    return cached;
-  }
+  if (cached) return cached;
 
   try {
     const response = await fetch(request);
-    
-    // Solo cachear respuestas exitosas
-    if (response.status === 200) {
-      cache.put(request, response.clone());
-    }
-    
+    if (response.status === 200) cache.put(request, response.clone());
     return response;
   } catch (error) {
-    console.error('❌ Error en fetch:', error);
     throw error;
   }
 }
 
-// ============================================
-// ESTRATEGIA: Network First (HTML, documentos)
-// ============================================
 async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
-  
   try {
     const response = await fetch(request);
-    
-    // Cachear la respuesta para uso offline
-    if (response.status === 200) {
-      cache.put(request, response.clone());
-    }
-    
+    if (response.status === 200) cache.put(request, response.clone());
     return response;
-  } catch (error) {
-    console.log('🌐 Sin conexión, sirviendo desde caché:', request.url);
+  } catch {
     const cached = await cache.match(request);
-    
-    if (cached) {
-      return cached;
-    }
-    
-    // Si no hay caché, devolver página offline básica
-    if (request.destination === 'document') {
-      const fallback = await cache.match('/index.html');
-      if (fallback) return fallback;
-    }
-    
-    throw error;
+    if (cached) return cached;
+
+    // Fallback al index.html para navegación SPA
+    const fallback = await cache.match(`${BASE_PATH}/index.html`)
+      || await cache.match(`${BASE_PATH}/`);
+    if (fallback) return fallback;
+
+    throw new Error('Sin conexión y sin caché');
   }
 }
 
 // ============================================
-// MENSAJES - Comunicación con la app
+// MENSAJES
 // ============================================
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('⏩ Actualizando Service Worker...');
+  if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-console.log('🚀 Service Worker cargado');
-
 // ============================================
-// PUSH NOTIFICATIONS - Recibir notificaciones
+// PUSH NOTIFICATIONS
+// Fix: event.waitUntil es lo que permite que funcione
+// con la app cerrada — ya estaba bien, pero faltaba
+// que el SW estuviera correctamente registrado
 // ============================================
 self.addEventListener('push', (event) => {
-  console.log('📩 Notificación push recibida');
+  console.log('📩 Push recibido (app puede estar cerrada)');
 
   let data = {
-    title: 'Nueva notificación',
-    body: 'Tienes una actualización',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png'
+    title: '🎬 Anime Tracker',
+    body: 'Nuevo episodio disponible',
+    icon: `${BASE_PATH}/icons/icon-192x192.png`,
+    badge: `${BASE_PATH}/icons/icon-192x192.png`,
   };
 
   if (event.data) {
     try {
-      data = event.data.json();
-    } catch (error) {
-      console.error('Error parseando notificación:', error);
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    } catch {
+      data.body = event.data.text();
     }
   }
 
   const options = {
     body: data.body,
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-192x192.png',
+    icon: data.icon,
+    badge: data.badge,
     tag: data.tag || 'anime-notification',
-    data: data.data || {},
+    data: {
+      url: `${BASE_PATH}/`,   // Fix: URL correcta con base path
+      ...(data.data || {})
+    },
     actions: data.actions || [
-      { action: 'open', title: 'Ver ahora', icon: '/icons/icon-192x192.png' },
-      { action: 'close', title: 'Cerrar' }
+      { action: 'open', title: 'Ver ahora' },
+      { action: 'dismiss', title: 'Cerrar' }
     ],
     vibrate: [200, 100, 200],
-    requireInteraction: true, // No se cierra automáticamente
-    silent: false
+    requireInteraction: true,
+    silent: false,
+    renotify: true,
   };
 
+  // event.waitUntil es CRÍTICO — le dice al browser
+  // que mantenga el SW vivo hasta que la notificación se muestre
   event.waitUntil(
     self.registration.showNotification(data.title, options)
   );
 });
 
 // ============================================
-// NOTIFICATION CLICK - Manejar clics
+// NOTIFICATION CLICK
+// Fix: usa BASE_PATH correcto para abrir la app
 // ============================================
 self.addEventListener('notificationclick', (event) => {
-  console.log('🖱️ Click en notificación:', event.action);
-
+  console.log('🖱️ Click en notificación, action:', event.action);
   event.notification.close();
 
-  if (event.action === 'open') {
-    // Abrir la app
-    event.waitUntil(
-      clients.openWindow(event.notification.data.url || '/')
-    );
-  } else if (event.action === 'close') {
-    // Solo cerrar (ya se cerró arriba)
-    return;
-  } else {
-    // Click en el cuerpo de la notificación
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then((clientList) => {
-          // Si ya hay una ventana abierta, enfocarla
-          for (const client of clientList) {
-            if (client.url === '/' && 'focus' in client) {
-              return client.focus();
-            }
+  if (event.action === 'dismiss') return;
+
+  // Fix: URL con base path de GitHub Pages
+  const targetUrl = event.notification.data?.url || `${BASE_PATH}/`;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Si ya hay una ventana abierta de la app, enfocarla
+        for (const client of clientList) {
+          if (client.url.includes(BASE_PATH) && 'focus' in client) {
+            return client.focus();
           }
-          // Si no, abrir nueva ventana
-          if (clients.openWindow) {
-            return clients.openWindow('/');
-          }
-        })
-    );
-  }
+        }
+        // Si no, abrir nueva ventana
+        return clients.openWindow(targetUrl);
+      })
+  );
 });
 
-// ============================================
-// NOTIFICATION CLOSE - Cuando se cierra
-// ============================================
 self.addEventListener('notificationclose', (event) => {
   console.log('❌ Notificación cerrada:', event.notification.tag);
 });
+
+console.log('🚀 SW cargado — scope:', self.registration?.scope);
