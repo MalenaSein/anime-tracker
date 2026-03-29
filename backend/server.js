@@ -23,6 +23,21 @@ app.use((req, res, next) => {
 });
 
 // ============================================
+// FIX RENDER SLEEP — agregar esto en server.js
+// Pegalo junto a las otras rutas (antes del 404)
+// ============================================
+ 
+// Endpoint de ping para que UptimeRobot mantenga el servidor despierto
+// UptimeRobot lo llama cada 5 minutos gratis → Render nunca duerme
+app.get('/ping', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()) + 's'
+  });
+});
+
+// ============================================
 // RUTAS
 // ============================================
 app.get('/', (req, res) => {
