@@ -33,6 +33,12 @@ jobs:
       - name: Install and Build
         env:
           REACT_APP_API_URL: https://anime-tracker-yape.onrender.com/api
+          REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
+          REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
+          REACT_APP_FIREBASE_STORAGE_BUCKET: ${{ secrets.REACT_APP_FIREBASE_STORAGE_BUCKET }}
+          REACT_APP_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.REACT_APP_FIREBASE_MESSAGING_SENDER_ID }}
+          REACT_APP_FIREBASE_APP_ID: ${{ secrets.REACT_APP_FIREBASE_APP_ID }}
         run: |
           cd frontend
           rm -rf node_modules
@@ -45,7 +51,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './frontend/build'  # <--- AQUÍ ESTABA EL CAMBIO CLAVE (build en vez de dist)
+          path: './frontend/build'  
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
