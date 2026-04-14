@@ -41,7 +41,7 @@ async function initDatabase() {
       const [cols] = await db.query(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios'
-        AND COLUMN_NAME IN ('recovery_pin', 'reset_token', 'reset_token_expiry')
+        AND COLUMN_NAME IN ('recovery_pin', 'reset_token', 'reset_token_expiry', 'firebase_uid')
       `);
       const colNames = cols.map(c => c.COLUMN_NAME);
 
@@ -56,6 +56,12 @@ async function initDatabase() {
       if (!colNames.includes('reset_token_expiry')) {
         await db.query(`ALTER TABLE usuarios ADD COLUMN reset_token_expiry DATETIME`);
         console.log('✅ Columna reset_token_expiry agregada a usuarios');
+      }
+
+      if (!colNames.includes('firebase_uid')) {
+        await db.query(`ALTER TABLE usuarios ADD COLUMN firebase_uid VARCHAR(255) NULL`);
+        await db.query(`ALTER TABLE usuarios ADD INDEX idx_firebase_uid (firebase_uid)`).catch(() => {});
+        console.log('✅ Columna firebase_uid agregada a usuarios');
       }
 
       console.log('✅ Tabla "usuarios" verificada');

@@ -1,11 +1,10 @@
 // ============================================
-// PASO 3: authMiddleware con modo DUAL
+// authMiddleware con modo DUAL
 // Acepta el JWT propio (usuarios viejos) Y Firebase ID Token (usuarios nuevos)
-// Esto garantiza que nadie pierde acceso durante la transición
 // ============================================
 
 const jwt = require('jsonwebtoken');
-const admin = require('../config/firebase'); // ver firebase.js más abajo
+const admin = require('../config/firebase');
 const db = require('../config/database');
 
 const authMiddleware = async (req, res, next) => {
@@ -29,21 +28,20 @@ const authMiddleware = async (req, res, next) => {
 
     // ============================================
     // INTENTAR PRIMERO: Firebase ID Token
-    // Los tokens de Firebase empiezan diferente a los JWT propios
     // ============================================
     try {
       const decodedFirebase = await admin.auth().verifyIdToken(token);
-
-      // Token Firebase válido — buscar el usuario en MySQL por firebase_uid
       const firebaseUid = decodedFirebase.uid;
+      const email = decodedFirebase.email;
 
+      // Buscar usuario por firebase_uid
       const [users] = await db.query(
-        'SELECT id, username, email FROM usuarios WHERE firebase_uid = ?',
+        'SELECT id, username, email, firebase_uid FROM usuarios WHERE firebase_uid = ?',
         [firebaseUid]
       );
 
       if (users.length > 0) {
-        // Usuario migrado — tiene registro en MySQL
+        // Camino normal
         req.user = {
           id: users[0].id,
           username: users[0].username || decodedFirebase.name,
@@ -51,52 +49,75 @@ const authMiddleware = async (req, res, next) => {
           firebase_uid: firebaseUid,
           authMethod: 'firebase'
         };
-      } else {
-        // Usuario nuevo de Firebase (registrado después de la migración)
-        // Crear registro en MySQL automáticamente
-        const username = decodedFirebase.name || decodedFirebase.email.split('@')[0];
-        const email = decodedFirebase.email;
 
-        const [result] = await db.query(
-          'INSERT INTO usuarios (username, email, password, firebase_uid) VALUES (?, ?, ?, ?)',
-          [username, email, 'FIREBASE_AUTH', firebaseUid]
+      } else {
+        // No encontrado por firebase_uid — buscar por EMAIL antes de crear uno nuevo.
+        // Esto cubre el caso donde el usuario existia antes de integrar Firebase
+        // y su registro en MySQL no tiene firebase_uid guardado todavia.
+        // Sin este fallback, se crea un usuario nuevo con un id distinto y
+        // todas las queries devuelven listas vacias hasta que se cierra sesion.
+        const [usersByEmail] = await db.query(
+          'SELECT id, username, email, firebase_uid FROM usuarios WHERE email = ?',
+          [email]
         );
 
-        req.user = {
-          id: result.insertId,
-          username,
-          email,
-          firebase_uid: firebaseUid,
-          authMethod: 'firebase'
-        };
+        if (usersByEmail.length > 0) {
+          // Usuario existente encontrado por email — vincular firebase_uid para la proxima vez
+          if (!usersByEmail[0].firebase_uid) {
+            await db.query(
+              'UPDATE usuarios SET firebase_uid = ? WHERE id = ?',
+              [firebaseUid, usersByEmail[0].id]
+            );
+            console.log('Linked firebase_uid to existing user:', email);
+          }
 
-        console.log('👤 Nuevo usuario Firebase registrado en MySQL:', email);
+          req.user = {
+            id: usersByEmail[0].id,
+            username: usersByEmail[0].username,
+            email: usersByEmail[0].email,
+            firebase_uid: firebaseUid,
+            authMethod: 'firebase'
+          };
+
+        } else {
+          // Usuario realmente nuevo
+          const username = decodedFirebase.name || email.split('@')[0];
+
+          const [result] = await db.query(
+            'INSERT INTO usuarios (username, email, password, firebase_uid) VALUES (?, ?, ?, ?)',
+            [username, email, 'FIREBASE_AUTH', firebaseUid]
+          );
+
+          req.user = {
+            id: result.insertId,
+            username,
+            email,
+            firebase_uid: firebaseUid,
+            authMethod: 'firebase'
+          };
+
+          console.log('New Firebase user registered in MySQL:', email);
+        }
       }
 
-      console.log('✅ Auth Firebase:', req.user.username);
+      console.log('Auth Firebase OK:', req.user.username);
       return next();
 
     } catch (firebaseError) {
-      // No es un token Firebase — probar con JWT propio
-      // Esto cubre a los usuarios que todavía tienen el token viejo guardado
       if (
         firebaseError.code === 'auth/argument-error' ||
         firebaseError.code === 'auth/id-token-expired' ||
         firebaseError.errorInfo?.code === 'auth/argument-error'
       ) {
-        // Era un token Firebase pero expiró — rechazar
         return res.status(401).json({
-          error: 'Sesión expirada, por favor iniciá sesión nuevamente',
+          error: 'Sesion expirada, por favor inicia sesion nuevamente',
           code: 'TOKEN_EXPIRED'
         });
       }
-
-      // No era Firebase — intentar como JWT propio
     }
 
     // ============================================
     // FALLBACK: JWT propio (usuarios con token viejo)
-    // Se puede eliminar este bloque una vez que todos migren
     // ============================================
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -107,22 +128,22 @@ const authMiddleware = async (req, res, next) => {
         authMethod: 'jwt_legacy'
       };
 
-      console.log('✅ Auth JWT legacy:', decoded.username);
+      console.log('Auth JWT legacy OK:', decoded.username);
       return next();
 
     } catch (jwtError) {
       if (jwtError.name === 'TokenExpiredError') {
         return res.status(401).json({
-          error: 'Sesión expirada, por favor iniciá sesión nuevamente',
+          error: 'Sesion expirada, por favor inicia sesion nuevamente',
           code: 'TOKEN_EXPIRED'
         });
       }
-      return res.status(401).json({ error: 'Token inválido' });
+      return res.status(401).json({ error: 'Token invalido' });
     }
 
   } catch (error) {
-    console.error('❌ Error en authMiddleware:', error.message);
-    return res.status(401).json({ error: 'Error de autenticación' });
+    console.error('Error en authMiddleware:', error.message);
+    return res.status(401).json({ error: 'Error de autenticacion' });
   }
 };
 
