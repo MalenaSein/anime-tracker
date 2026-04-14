@@ -11,7 +11,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
     animeId: '',
     day: '',
     hour: '',
-    minute: '0'
+    minute: '00'
   });
 
   const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -37,7 +37,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       } else if (e.key === 'Escape' && showAddModal) {
         setShowAddModal(false);
         setSelectedCell(null);
-        setFormData({ animeId: '', day: '', hour: '', minute: '0' });
+        setFormData({ animeId: '', day: '', hour: '', minute: '00' });
       }
     };
 
@@ -72,15 +72,18 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
     }
   };
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const handleAddSchedule = async () => {
     if (!formData.animeId || selectedCell === null) return;
+    setErrorMsg('');
 
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
       const token = localStorage.getItem('token');
       
       const scheduleData = {
-        anime_id: formData.animeId,
+        anime_id: parseInt(formData.animeId),
         day: selectedCell.day,
         hour: selectedCell.hour,
         minute: parseInt(formData.minute),
@@ -97,14 +100,19 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       });
       const data = await res.json();
       
-      if (!data.error) {
-        setSchedules([...schedules, data]);
-        setShowAddModal(false);
-        setSelectedCell(null);
-        setFormData({ animeId: '', day: '', hour: '', minute: '0' });
+      if (!res.ok || data.error) {
+        setErrorMsg(data.error || 'Error al agregar el horario');
+        return;
       }
+
+      setSchedules([...schedules, data]);
+      setShowAddModal(false);
+      setSelectedCell(null);
+      setFormData({ animeId: '', day: '', hour: '', minute: '00' });
+      setErrorMsg('');
     } catch (err) {
       console.error('Error al agregar horario:', err);
+      setErrorMsg('Error de conexión. Intentá de nuevo.');
     }
   };
 
@@ -130,7 +138,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
 
   const openAddModal = (dayIndex, hour) => {
     setSelectedCell({ day: dayIndex, hour });
-    setFormData({ ...formData, minute: '0' });
+    setFormData({ ...formData, minute: '00' });
     setShowAddModal(true);
   };
 
@@ -693,7 +701,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       <div style={styles.modal} onClick={() => {
         setShowAddModal(false);
         setSelectedCell(null);
-        setFormData({ animeId: '', day: '', hour: '', minute: '0' });
+        setFormData({ animeId: '', day: '', hour: '', minute: '00' });
       }}>
         <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
           <div style={styles.modalHeader}>
@@ -725,7 +733,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
             >
               <option value="">-- Selecciona un anime --</option>
               {animes
-                .filter(a => a.estado === 'viendo')
+                .filter(a => !a.estado || ['viendo', 'watching', 'en progreso', 'airing'].includes(a.estado.toLowerCase()))
                 .map(anime => (
                   <option key={anime.id} value={anime.id}>
                     {anime.nombre}
@@ -756,6 +764,15 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
             </select>
           </div>
 
+          {errorMsg && (
+            <div style={{ 
+              background: '#fee2e2', color: '#dc2626', borderRadius: '0.5rem',
+              padding: '0.75rem', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: '500'
+            }}>
+              ⚠️ {errorMsg}
+            </div>
+          )}
+
           <div style={styles.buttonGroup}>
             <button
               onClick={handleAddSchedule}
@@ -775,7 +792,8 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
               onClick={() => {
                 setShowAddModal(false);
                 setSelectedCell(null);
-                setFormData({ animeId: '', day: '', hour: '', minute: '0' });
+                setFormData({ animeId: '', day: '', hour: '', minute: '00' });
+                setErrorMsg('');
               }}
               style={{
                 ...styles.button,
