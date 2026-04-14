@@ -269,9 +269,11 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
     },
     calendarGrid: {
       display: 'grid',
-      gridTemplateColumns: '100px repeat(7, 1fr)',
+      gridTemplateColumns: '80px repeat(7, minmax(0, 1fr))',
       fontSize: '0.85rem',
-      minWidth: '900px'
+      minWidth: '900px',
+      tableLayout: 'fixed',
+      width: '100%'
     },
     headerCell: {
       padding: '1rem 0.5rem',
@@ -303,7 +305,9 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
       position: 'relative',
-      background: '#111827'
+      background: '#111827',
+      overflow: 'hidden',
+      minWidth: 0
     },
     cellHover: {
       background: '#1f2937',
@@ -324,7 +328,9 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       gap: '0.25rem',
       boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
       fontWeight: '600',
-      transition: 'all 0.2s ease'
+      transition: 'all 0.2s ease',
+      minWidth: 0,
+      overflow: 'hidden'
     },
     scheduleItemHover: {
       transform: 'translateY(-2px)',
