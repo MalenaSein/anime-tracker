@@ -9,6 +9,7 @@ import Filters from '../components/Filters';
 import Statistics from '../components/Statistics';
 import ScheduleCalendar from '../components/ScheduleCalendar';
 import MusicPlayer from '../components/MusicPlayer';
+import { auth } from '../config/firebase';
 
 const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [animes, setAnimes] = useState([]);
@@ -41,12 +42,29 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const loadAnimes = async () => {
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
+
+      // Obtener siempre un token fresco antes de hacer el fetch.
+      // Esto evita el 401 que ocurre cuando el token expiró mientras
+      // la app estaba abierta pero sin actividad (Render sleep, etc.)
+      let token = localStorage.getItem('token');
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken(true);
+        localStorage.setItem('token', token);
+      }
+
       const res = await fetch(`${API_URL}/animes`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      if (res.status === 401) {
+        // Token inválido incluso después del refresh — forzar re-login
+        console.error('401 al cargar animes — sesión inválida');
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
-      if (!data.error) setAnimes(data);
+      if (!data.error && Array.isArray(data)) setAnimes(data);
     } catch (err) {
       console.error('Error al cargar animes:', err);
     } finally {

@@ -1,64 +1,91 @@
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './config/firebase';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import ForgotPassword from './pages/ForgotPassword'; // ✨ NUEVO
+import ForgotPassword from './pages/ForgotPassword';
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'forgot'
+  const [authReady, setAuthReady] = useState(false); // esperar a Firebase antes de renderizar
+  const [screen, setScreen] = useState('login');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      setIsAuthenticated(true);
-      setCurrentUser(JSON.parse(user));
-    }
+    // onAuthStateChanged es la fuente de verdad para autenticación.
+    // Se dispara al montar, al login, al logout, y cuando Firebase
+    // renueva el token en background (cada hora). De esta forma el
+    // localStorage siempre tiene un token válido antes de cualquier fetch.
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Forzar refresh del token — esto garantiza que no mandamos
+        // un token expirado aunque el usuario lleve horas sin interactuar
+        const freshToken = await firebaseUser.getIdToken(true);
+        localStorage.setItem('token', freshToken);
+
+        const user = {
+          id: firebaseUser.uid,
+          username: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          email: firebaseUser.email,
+          photoURL: firebaseUser.photoURL
+        };
+        localStorage.setItem('user', JSON.stringify(user));
+        setCurrentUser(user);
+      } else {
+        // No hay sesión activa
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setCurrentUser(null);
+      }
+      // Firebase terminó de verificar — ya podemos renderizar
+      setAuthReady(true);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleLogin = (user) => {
-    setIsAuthenticated(true);
-    setCurrentUser(user);
-  };
-
-  const handleRegister = (user) => {
-    setIsAuthenticated(true);
-    setCurrentUser(user);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    const { signOut } = await import('firebase/auth');
+    await signOut(auth);
+    // onAuthStateChanged se encarga del resto (limpiar localStorage y estado)
     setScreen('login');
   };
 
-  // ✨ NUEVO: cuando el usuario cambia su username desde el perfil
   const handleUserUpdated = (updatedUser) => {
     setCurrentUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  if (!isAuthenticated) {
+  // Mientras Firebase verifica la sesión, mostrar loading
+  // Esto evita el flash de la pantalla de login al refrescar la página
+  if (!authReady) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0f172a',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#6366f1' }}>
+          Cargando...
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
     if (screen === 'register') {
       return (
         <Register
-          onRegister={handleRegister}
+          onRegister={(user) => setCurrentUser(user)}
           onSwitchToLogin={() => setScreen('login')}
         />
       );
     }
     if (screen === 'forgot') {
-      return (
-        <ForgotPassword onBack={() => setScreen('login')} />
-      );
+      return <ForgotPassword onBack={() => setScreen('login')} />;
     }
     return (
       <Login
-        onLogin={handleLogin}
+        onLogin={(user) => setCurrentUser(user)}
         onSwitchToRegister={() => setScreen('register')}
         onForgotPassword={() => setScreen('forgot')}
       />
