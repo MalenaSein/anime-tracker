@@ -326,7 +326,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
                   {activeTab === 'abandonado' && '🚫 No hay animes abandonados con estos filtros'}
                 </div>
               ) : isMobile ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem' }}>
+                <div>
                   {filteredAnimes.map(anime => (
                     <AnimeCard
                       key={anime.id} anime={anime}

@@ -131,172 +131,161 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
   const canEdit = anime.estado === 'viendo' || anime.estado === 'completado' || anime.estado === 'abandonado';
 
   // ========================================
-  // VERSIÓN MÓVIL
+  // VERSIÓN MÓVIL — fila compacta estilo desktop
   // ========================================
   if (isMobile) {
-    const mobileStyles = {
-      card: {
-        background: '#1f2937', borderRadius: '0.75rem', padding: '1rem',
-        border: '1px solid #374151', display: 'flex', flexDirection: 'column', gap: '1rem'
+    const ms = {
+      row: {
+        display: 'flex', alignItems: 'center', gap: '0.625rem',
+        padding: '0.625rem 0.75rem', borderBottom: '1px solid #374151',
+        background: '#1f2937', minHeight: '72px'
       },
-      header: { display: 'flex', gap: '1rem', alignItems: 'flex-start' },
       image: {
-        width: '60px', height: '85px', objectFit: 'cover',
-        borderRadius: '0.5rem', border: '2px solid #374151', flexShrink: 0
+        width: '44px', height: '62px', objectFit: 'cover',
+        borderRadius: '0.375rem', border: '1px solid #374151', flexShrink: 0
       },
-      info: { flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 },
-      name: { fontWeight: '600', color: '#f9fafb', fontSize: '1rem', wordBreak: 'break-word' },
+      // bloque central que ocupa todo el espacio disponible
+      center: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' },
+      name: {
+        fontWeight: '600', color: '#f9fafb', fontSize: '0.85rem',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+      },
       tag: {
         display: 'inline-block', background: '#374151', color: '#c7d2fe',
-        fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '0.25rem',
-        fontWeight: '500', width: 'fit-content'
+        fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '0.2rem', fontWeight: '500'
+      },
+      subtext: { color: '#6b7280', fontSize: '0.72rem' },
+      stars: { display: 'flex', gap: '0.1rem', alignItems: 'center' },
+      // bloque derecho: controles de caps o estrellas
+      right: { display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 },
+      capBtn: {
+        width: '28px', height: '28px', border: 'none', background: '#374151',
+        borderRadius: '0.375rem', cursor: 'pointer', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', color: '#e5e7eb', flexShrink: 0
+      },
+      capNum: { fontWeight: '700', fontSize: '0.9rem', color: '#f9fafb', minWidth: '26px', textAlign: 'center' },
+      menuBtn: {
+        padding: '0.375rem', border: 'none', background: 'transparent',
+        cursor: 'pointer', borderRadius: '0.25rem', display: 'flex',
+        alignItems: 'center', color: '#6b7280', flexShrink: 0
+      },
+      saveBtn: {
+        width: '28px', height: '28px', border: 'none', borderRadius: '0.375rem',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
       },
       editInput: {
-        width: '100%', padding: '0.5rem', border: '1px solid #6366f1',
-        borderRadius: '0.375rem', fontSize: '0.875rem', background: '#111827',
-        color: '#e5e7eb', boxSizing: 'border-box', marginBottom: '0.25rem'
-      },
-      editSelect: {
-        width: '100%', padding: '0.5rem', border: '1px solid #6366f1',
-        borderRadius: '0.375rem', fontSize: '0.875rem', background: '#111827',
+        width: '100%', padding: '0.3rem 0.4rem', border: '1px solid #6366f1',
+        borderRadius: '0.3rem', fontSize: '0.8rem', background: '#111827',
         color: '#e5e7eb', boxSizing: 'border-box'
       },
-      button: {
-        flex: 1, padding: '0.75rem', border: '1px solid #374151', borderRadius: '0.5rem',
-        background: 'transparent', color: '#e5e7eb', fontSize: '0.875rem', fontWeight: '500',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '0.5rem', transition: 'all 0.2s'
-      }
+      editSelect: {
+        width: '100%', padding: '0.3rem 0.4rem', border: '1px solid #6366f1',
+        borderRadius: '0.3rem', fontSize: '0.75rem', background: '#111827',
+        color: '#e5e7eb', boxSizing: 'border-box'
+      },
     };
 
     return (
       <>
-        <div style={mobileStyles.card}>
-          <div style={mobileStyles.header}>
-            <img
-              src={anime.imagen_url || 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'}
-              alt={anime.nombre}
-              style={mobileStyles.image}
-              onError={(e) => { e.target.src = 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'; }}
-            />
-            <div style={mobileStyles.info}>
-              {isEditing ? (
-                <>
-                  <input
-                    type="text"
-                    value={editedData.nombre}
-                    onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
-                    style={mobileStyles.editInput}
-                    autoFocus
-                  />
-                  <select
-                    value={editedData.tipo}
-                    onChange={(e) => setEditedData({ ...editedData, tipo: e.target.value })}
-                    style={mobileStyles.editSelect}
-                  >
-                    {ANIME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <input
-                    type="number"
-                    value={editedData.capitulos_vistos}
-                    onChange={(e) => setEditedData({ ...editedData, capitulos_vistos: parseInt(e.target.value) || 0 })}
-                    style={{ ...mobileStyles.editInput, marginTop: '0.25rem' }}
-                    min="0"
-                    placeholder="Capítulos vistos"
-                  />
-                </>
-              ) : (
-                <>
-                  <div style={mobileStyles.name}>{anime.nombre}</div>
-                  <span style={mobileStyles.tag}>{anime.tipo}</span>
-                  {anime.estado === 'completado' || anime.estado === 'abandonado' ? (
-                    <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{anime.capitulos_vistos} caps</span>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </div>
+        <div style={ms.row}>
+          {/* Portada */}
+          <img
+            src={anime.imagen_url || 'https://placehold.co/44x62/374151/9ca3af?text=?'}
+            alt={anime.nombre}
+            style={ms.image}
+            onError={(e) => { e.target.src = 'https://placehold.co/44x62/374151/9ca3af?text=?'; }}
+          />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* Info central */}
+          <div style={ms.center}>
             {isEditing ? (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={handleSaveEdit}
-                  style={{ ...mobileStyles.button, background: '#10b981', border: 'none', color: 'white' }}
-                >
-                  <Save size={16} /> Guardar
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  style={{ ...mobileStyles.button, background: '#ef4444', border: 'none', color: 'white' }}
-                >
-                  <X size={16} /> Cancelar
-                </button>
-              </div>
-            ) : isWatching ? (
               <>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                  background: '#111827', borderRadius: '0.5rem', padding: '0.75rem'
-                }}>
-                  <button onClick={() => handleUpdateCapitulos(-1)}
-                    style={{ padding: '0.5rem', border: 'none', background: '#374151', cursor: 'pointer', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', color: '#e5e7eb' }}>
-                    <ChevronDown size={24} />
-                  </button>
-                  <span style={{ fontWeight: '700', fontSize: '1.25rem', color: '#f9fafb', minWidth: '50px', textAlign: 'center' }}>
-                    {anime.capitulos_vistos}
-                  </span>
-                  <button onClick={() => handleUpdateCapitulos(1)}
-                    style={{ padding: '0.5rem', border: 'none', background: '#374151', cursor: 'pointer', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', color: '#e5e7eb' }}>
-                    <ChevronUp size={24} />
-                  </button>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(anime.nombre + ' anime')}`, '_blank')} style={mobileStyles.button}>🔍 Buscar</button>
-                  <button ref={menuButtonRef} onClick={() => setShowMenu(!showMenu)} style={mobileStyles.button}><MoreVertical size={18} /> Más</button>
-                </div>
+                <input type="text" value={editedData.nombre}
+                  onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
+                  style={ms.editInput} autoFocus />
+                <select value={editedData.tipo}
+                  onChange={(e) => setEditedData({ ...editedData, tipo: e.target.value })}
+                  style={ms.editSelect}>
+                  {ANIME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <input type="number" value={editedData.capitulos_vistos}
+                  onChange={(e) => setEditedData({ ...editedData, capitulos_vistos: parseInt(e.target.value) || 0 })}
+                  style={{ ...ms.editInput, marginTop: '0.15rem' }} min="0" placeholder="Caps" />
               </>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
-                  {anime.estado === 'completado' && anime.calificacion > 0 ? (
-                    [1,2,3,4,5].map(n => (
-                      <Star key={n} size={20} style={{ fill: n <= anime.calificacion ? '#facc15' : 'none', color: n <= anime.calificacion ? '#facc15' : '#d1d5db' }} />
-                    ))
-                  ) : (
-                    <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-                      {anime.estado === 'abandonado' ? 'Abandonado' : anime.estado === 'por_ver' ? 'Por ver' : 'Sin calificar'}
-                    </span>
+                <div style={ms.name}>{anime.nombre}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <span style={ms.tag}>{anime.tipo}</span>
+                  {(anime.estado === 'completado' || anime.estado === 'abandonado' || anime.estado === 'por_ver') && (
+                    <span style={ms.subtext}>{anime.capitulos_vistos} caps</span>
                   )}
                 </div>
-                <span style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center' }}>
-                  {anime.capitulos_vistos} capítulos vistos
-                </span>
-                <button ref={menuButtonRef} onClick={() => setShowMenu(!showMenu)}
-                  style={{ ...mobileStyles.button, width: '100%' }}>
-                  <MoreVertical size={18} /> Opciones
+                {/* Estrellas para completados */}
+                {anime.estado === 'completado' && anime.calificacion > 0 && (
+                  <div style={ms.stars}>
+                    {[1,2,3,4,5].map(n => (
+                      <Star key={n} size={11} style={{ fill: n <= anime.calificacion ? '#facc15' : 'none', color: n <= anime.calificacion ? '#facc15' : '#4b5563' }} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Controles derecha */}
+          <div style={ms.right}>
+            {isEditing ? (
+              <>
+                <button onClick={handleSaveEdit} style={{ ...ms.saveBtn, background: '#10b981' }}>
+                  <Save size={14} color="white" />
+                </button>
+                <button onClick={handleCancelEdit} style={{ ...ms.saveBtn, background: '#ef4444' }}>
+                  <X size={14} color="white" />
                 </button>
               </>
+            ) : isWatching ? (
+              <>
+                <button onClick={() => handleUpdateCapitulos(-1)} style={ms.capBtn}>
+                  <ChevronDown size={16} />
+                </button>
+                <span style={ms.capNum}>{anime.capitulos_vistos}</span>
+                <button onClick={() => handleUpdateCapitulos(1)} style={ms.capBtn}>
+                  <ChevronUp size={16} />
+                </button>
+                <button ref={menuButtonRef} onClick={() => setShowMenu(!showMenu)} style={ms.menuBtn}>
+                  <MoreVertical size={18} />
+                </button>
+              </>
+            ) : (
+              <button ref={menuButtonRef} onClick={() => setShowMenu(!showMenu)} style={ms.menuBtn}>
+                <MoreVertical size={18} />
+              </button>
             )}
           </div>
         </div>
 
-        {/* Menú desplegable */}
+        {/* Menú desplegable — igual que antes */}
         {showMenu && (
           <div ref={menuRef} style={{
             ...getMenuPosition(), background: '#1f2937', border: '1px solid #374151',
             borderRadius: '0.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
             zIndex: 9999, minWidth: '200px'
           }}>
-            {/* ✨ Editar disponible en completado y abandonado también */}
             {canEdit && (
-              <button
-                onClick={() => handleMenuAction(() => setIsEditing(true))}
+              <button onClick={() => handleMenuAction(() => setIsEditing(true))}
                 style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: '#1f2937', color: '#e5e7eb', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}
                 onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
-                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
-              >
+                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
                 <Edit2 size={16} /> Editar
+              </button>
+            )}
+            {anime.estado !== 'por_ver' && (
+              <button onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(anime.nombre + ' anime')}`, '_blank')}
+                style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: '#1f2937', color: '#e5e7eb', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
+                🔍 Buscar en Google
               </button>
             )}
             {isWatching && (
