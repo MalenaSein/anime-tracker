@@ -7,7 +7,6 @@ import { TrendingUp, Award, Star, BarChart3 } from 'lucide-react';
 const Statistics = ({ animes }) => {
   const totalEpisodes = animes.reduce((sum, a) => sum + (a.capitulos_vistos || 0), 0);
   const completedAnimes = animes.filter(a => a.estado === 'completado').length;
-  const watchingAnimes = animes.filter(a => a.estado === 'viendo').length;
   
   const typeStats = animes.reduce((acc, anime) => {
     acc[anime.tipo] = (acc[anime.tipo] || 0) + 1;
@@ -114,7 +113,7 @@ const Statistics = ({ animes }) => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <BarChart3 size={24} style={{ color: '#8b5cf6' }} />
-          <span style={styles.cardTitle}>Top Géneros</span>
+          <span style={styles.cardTitle}>Top Tipos</span>
         </div>
         <div style={styles.typeList}>
           {topTypes.length > 0 ? topTypes.map(([type, count]) => (

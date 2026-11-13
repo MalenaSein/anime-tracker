@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Trash2, Edit2, Eye, EyeOff, X } from 'lucide-react';
+import { Trash2, Edit2, Eye, EyeOff, X } from 'lucide-react';
 import { authAPI } from '../services/api';
 
 const ProfileModal = ({ show, user, onClose, onUsernameChanged, onAccountDeleted }) => {
@@ -12,6 +12,8 @@ const ProfileModal = ({ show, user, onClose, onUsernameChanged, onAccountDeleted
   const [success, setSuccess] = useState('');
 
   if (!show) return null;
+
+  const isFirebaseUser = user?.authMethod === 'firebase';
 
   const reset = () => {
     setView('menu');
@@ -33,18 +35,13 @@ const ProfileModal = ({ show, user, onClose, onUsernameChanged, onAccountDeleted
     setLoading(true);
     try {
       const data = await authAPI.changeUsername(newUsername);
-      if (data.error) {
-        setError(data.error);
-      } else {
-        // Actualizar token y usuario en localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setSuccess('¡Nombre de usuario actualizado!');
-        onUsernameChanged(data.user);
-        setTimeout(() => { reset(); onClose(); }, 1500);
-      }
+      // No sobreescribir el token de Firebase con el JWT legacy que devuelve el backend.
+      localStorage.setItem('user', JSON.stringify({ ...user, username: data.user.username }));
+      setSuccess('¡Nombre de usuario actualizado!');
+      onUsernameChanged({ ...user, username: data.user.username });
+      setTimeout(() => { reset(); onClose(); }, 1500);
     } catch (err) {
-      setError('Error al conectar con el servidor');
+      setError(err.message || 'Error al conectar con el servidor');
     } finally {
       setLoading(false);
     }
@@ -55,14 +52,10 @@ const ProfileModal = ({ show, user, onClose, onUsernameChanged, onAccountDeleted
     setError('');
     setLoading(true);
     try {
-      const data = await authAPI.deleteAccount(password);
-      if (data.error) {
-        setError(data.error);
-      } else {
-        onAccountDeleted();
-      }
+      await authAPI.deleteAccount(password);
+      onAccountDeleted();
     } catch (err) {
-      setError('Error al conectar con el servidor');
+      setError(err.message || 'Error al conectar con el servidor');
     } finally {
       setLoading(false);
     }
@@ -225,31 +218,40 @@ const ProfileModal = ({ show, user, onClose, onUsernameChanged, onAccountDeleted
               padding: '0.75rem', marginBottom: '1rem', color: '#fca5a5', fontSize: '0.875rem',
               lineHeight: '1.5'
             }}>
-              ⚠️ <strong>Atención:</strong> Esta acción eliminará permanentemente tu cuenta y todos tus animes. No se puede deshacer.
+              ⚠️ <strong>Atención:</strong> Esta acción eliminará permanentemente tu cuenta
+              {isFirebaseUser ? ' de Firebase' : ''} y todos tus animes. No se puede deshacer.
             </div>
 
             {error && <div style={errorBox}>{error}</div>}
 
             <form onSubmit={handleDeleteAccount}>
-              <div style={inputGroup}>
-                <label style={label}>Ingresá tu contraseña para confirmar</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={inputWithIcon}
-                    placeholder="••••••••"
-                    required
-                    autoFocus
-                    onFocus={(e) => e.target.style.borderColor = '#dc2626'}
-                    onBlur={(e) => e.target.style.borderColor = '#374151'}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={eyeBtn} tabIndex={-1}>
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              {!isFirebaseUser && (
+                <div style={inputGroup}>
+                  <label style={label}>Ingresá tu contraseña para confirmar</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={inputWithIcon}
+                      placeholder="••••••••"
+                      required
+                      autoFocus
+                      onFocus={(e) => e.target.style.borderColor = '#dc2626'}
+                      onBlur={(e) => e.target.style.borderColor = '#374151'}
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={eyeBtn} tabIndex={-1}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {isFirebaseUser && (
+                <div style={{ ...inputGroup, color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                  Tu sesión ya está verificada. Al confirmar, se borrarán también tus datos de Firebase.
+                </div>
+              )}
 
               <button type="submit" disabled={loading} style={dangerBtn}>
                 {loading ? 'Eliminando...' : '🗑️ Sí, eliminar mi cuenta'}

@@ -11,11 +11,12 @@ const MusicPlayer = () => {
   const dragOffset = useRef({ x: 0, y: 0 });
   const playerRef = useRef(null);
 
-  // Set default position bottom-right on mount
+  // Set default position bottom-right on mount (clampeada a la pantalla)
   useEffect(() => {
+    const width = Math.min(320, window.innerWidth);
     setPos({
-      x: window.innerWidth - 340,
-      y: window.innerHeight - 80
+      x: Math.max(0, window.innerWidth - width - 20),
+      y: Math.max(0, window.innerHeight - 100)
     });
   }, []);
 
@@ -123,7 +124,7 @@ const MusicPlayer = () => {
             left: pos.x,
             top: minimized ? pos.y : Math.min(pos.y, window.innerHeight - 340),
             zIndex: 9999,
-            width: 320,
+            width: Math.min(320, window.innerWidth),
             background: 'linear-gradient(160deg, #0f0c29 0%, #1a1740 50%, #0f172a 100%)',
             border: '1px solid rgba(99,102,241,0.35)',
             borderRadius: '1rem',

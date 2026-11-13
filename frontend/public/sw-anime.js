@@ -4,9 +4,19 @@
 // Fix: push notifications funcionan con app cerrada
 // ============================================
 
-const CACHE_NAME = 'anime-tracker-v2';
-const RUNTIME_CACHE = 'anime-tracker-runtime-v2';
-const BASE_PATH = '/anime-tracker'; // ← Fix crítico para GitHub Pages
+const CACHE_NAME = 'anime-tracker-v3';
+const RUNTIME_CACHE = 'anime-tracker-runtime-v3';
+
+// Base path dinámico: funciona en GitHub Pages (/anime-tracker),
+// en localhost y en cualquier dominio raíz.
+const BASE_PATH = (() => {
+  try {
+    const scope = self.registration?.scope || self.location.href;
+    return new URL(scope).pathname.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+})();
 
 // ============================================
 // INSTALACIÓN
@@ -69,8 +79,11 @@ self.addEventListener('fetch', (event) => {
 
   // No cachear requests al backend (Render)
   if (url.origin !== location.origin) {
+    // Devolver un status de error real (no 200) para que el frontend
+    // detecte correctamente que no hay conexión.
     event.respondWith(fetch(request).catch(() => {
       return new Response(JSON.stringify({ error: 'Sin conexión' }), {
+        status: 503,
         headers: { 'Content-Type': 'application/json' }
       });
     }));
@@ -193,7 +206,7 @@ self.addEventListener('notificationclick', (event) => {
   console.log('🖱️ Click en notificación, action:', event.action);
   event.notification.close();
 
-  if (event.action === 'dismiss') return;
+  if (event.action === 'dismiss' || event.action === 'close') return;
 
   // Fix: URL con base path de GitHub Pages
   const targetUrl = event.notification.data?.url || `${BASE_PATH}/`;

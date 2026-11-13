@@ -37,6 +37,7 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
       if (result.success) {
         onRegister({
           id: result.user.uid,
+          authMethod: 'firebase',
           username: formData.username.trim(),
           email: result.user.email
         });
@@ -58,6 +59,7 @@ const Register = ({ onRegister, onSwitchToLogin }) => {
       if (result.success) {
         onRegister({
           id: result.user.uid,
+          authMethod: 'firebase',
           username: result.user.displayName || result.user.email.split('@')[0],
           email: result.user.email,
           photoURL: result.user.photoURL

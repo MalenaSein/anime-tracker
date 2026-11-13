@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff, BellRing } from 'lucide-react';
+import { apiFetch } from '../services/api';
 
-// Eliminar /api del final si viene incluido en REACT_APP_API_URL
-const _RAW_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-const API_URL = _RAW_URL.endsWith('/api') ? _RAW_URL.slice(0, -4) : _RAW_URL;
 // PUBLIC_URL es /anime-tracker en GitHub Pages, '' en localhost
 const SW_URL = (process.env.PUBLIC_URL || '') + '/sw-anime.js';
 
@@ -28,6 +26,7 @@ const NotificationButton = ({ isMobile = false }) => {
     if (!supported) return;
     setPermission(Notification.permission);
     checkExistingSubscription();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkExistingSubscription = async () => {
@@ -36,6 +35,22 @@ const NotificationButton = ({ isMobile = false }) => {
       if (!reg) { console.log('[Notif] No hay SW registrado'); return; }
       const sub = await reg.pushManager.getSubscription();
       console.log('[Notif] Suscripcion existente:', sub ? 'SI' : 'NO');
+
+      // Reasociar la suscripción del navegador al usuario actual.
+      // Evita que un usuario reciba las notificaciones de otra cuenta
+      // que haya usado el mismo dispositivo.
+      if (sub) {
+        try {
+          await apiFetch('/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub)
+          });
+        } catch (error) {
+          console.error('[Notif] No se pudo reasociar la suscripción:', error);
+        }
+      }
+
       setSubscribed(!!sub);
     } catch (e) {
       console.error('[Notif] Error verificando suscripcion:', e);
@@ -77,7 +92,7 @@ const NotificationButton = ({ isMobile = false }) => {
     const readyReg = await navigator.serviceWorker.ready;
 
     console.log('[Notif] 4. Obteniendo clave VAPID...');
-    const resp = await fetch(`${API_URL}/api/push/vapid-public-key`);
+    const resp = await apiFetch('/push/vapid-public-key');
     if (!resp.ok) throw new Error(`Error VAPID (${resp.status})`);
     const { publicKey } = await resp.json();
     console.log('[Notif] Clave VAPID:', publicKey ? publicKey.substring(0,20)+'...' : 'NULL');
@@ -93,11 +108,10 @@ const NotificationButton = ({ isMobile = false }) => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No hay sesion');
 
-    const saveResp = await fetch(`${API_URL}/api/push/subscribe`, {
+    const saveResp = await apiFetch('/push/subscribe', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(sub)
     });
@@ -117,9 +131,9 @@ const NotificationButton = ({ isMobile = false }) => {
     await sub.unsubscribe();
     const token = localStorage.getItem('token');
     if (token) {
-      await fetch(`${API_URL}/api/push/unsubscribe`, {
+      await apiFetch('/push/unsubscribe', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: sub.endpoint })
       });
     }

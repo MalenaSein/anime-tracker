@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronUp, ChevronDown, MoreVertical, Star, Trash2, Check, PlayCircle, Edit2, X, Save, Clock } from 'lucide-react';
-
-const ANIME_TYPES = [
-  'Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke',
-  'Isekai', 'Mecha', 'Slice of Life', 'Romance', 'Comedia',
-  'Drama', 'Acción', 'Aventura', 'Fantasía', 'Sci-Fi',
-  'Horror', 'Misterio', 'Deportes', 'Musical', 'Ecchi',
-  'Harem', 'Yaoi', 'Yuri', 'Supernatural', 'Otro'
-];
+import { ChevronUp, ChevronDown, MoreVertical, Star, Trash2, Check, PlayCircle, Edit2, X, Save, PauseCircle } from 'lucide-react';
+import { ANIME_TYPES } from '../constants/animeTypes';
 
 const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -104,6 +97,12 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
     });
   };
 
+  const handleDelete = () => {
+    if (window.confirm(`¿Eliminar "${anime.nombre}"? Esta acción no se puede deshacer.`)) {
+      onDelete(anime.id);
+    }
+  };
+
   const handleMenuAction = async (action) => {
     setShowMenu(false);
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -127,8 +126,8 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
     };
   };
 
-  // ✨ NUEVO: puede editar si está viendo, completado O abandonado
-  const canEdit = anime.estado === 'viendo' || anime.estado === 'completado' || anime.estado === 'abandonado';
+  // ✨ NUEVO: puede editar si está viendo, pausado, completado O abandonado
+  const canEdit = ['viendo', 'pausado', 'completado', 'abandonado'].includes(anime.estado);
 
   // ========================================
   // VERSIÓN MÓVIL — fila compacta estilo desktop
@@ -217,7 +216,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
                 <div style={ms.name}>{anime.nombre}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                   <span style={ms.tag}>{anime.tipo}</span>
-                  {(anime.estado === 'completado' || anime.estado === 'abandonado' || anime.estado === 'por_ver') && (
+                  {(anime.estado === 'completado' || anime.estado === 'abandonado' || anime.estado === 'por_ver' || anime.estado === 'pausado') && (
                     <span style={ms.subtext}>{anime.capitulos_vistos} caps</span>
                   )}
                 </div>
@@ -302,7 +301,21 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
                   onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
                   <Trash2 size={16} /> Abandonar
                 </button>
+                <button onClick={() => handleMenuAction(() => handleChangeEstado('pausado'))}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: '#1f2937', color: '#eab308', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
+                  <PauseCircle size={16} /> Pausar
+                </button>
               </>
+            )}
+            {anime.estado === 'pausado' && (
+              <button onClick={() => handleMenuAction(() => handleChangeEstado('viendo'))}
+                style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: '#1f2937', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
+                <PlayCircle size={16} /> Reanudar
+              </button>
             )}
             {anime.estado === 'completado' && (
               <button onClick={() => handleMenuAction(() => handleChangeEstado('viendo', 0))}
@@ -328,7 +341,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
                 <PlayCircle size={16} /> Empezar a ver
               </button>
             )}
-            <button onClick={() => handleMenuAction(() => onDelete(anime.id))}
+            <button onClick={() => handleMenuAction(handleDelete)}
               style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: '#1f2937', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', borderTop: '1px solid #374151', borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem' }}
               onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
               onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
@@ -400,7 +413,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
   return (
     <>
       <div style={styles.row}>
-        <div><img src={anime.imagen_url || 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} onError={(e) => { e.target.src = 'https://via.placeholder.com/70x100/374151/9ca3af?text=Anime'; }} /></div>
+        <div><img src={anime.imagen_url || 'https://placehold.co/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} onError={(e) => { e.target.src = 'https://placehold.co/70x100/374151/9ca3af?text=Anime'; }} /></div>
 
         <div>
           {isEditing ? (
@@ -464,7 +477,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
               ))
             ) : (
               <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                {anime.estado === 'abandonado' ? 'Abandonado' : anime.estado === 'por_ver' ? 'Por ver' : 'Sin calificar'}
+                {anime.estado === 'abandonado' ? 'Abandonado' : anime.estado === 'por_ver' ? 'Por ver' : anime.estado === 'pausado' ? 'Pausado' : 'Sin calificar'}
               </span>
             )}
           </div>
@@ -504,7 +517,17 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
                 onMouseOver={(e) => e.currentTarget.style.background = '#374151'} onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
                 <Trash2 size={16} /> Abandonar
               </button>
+              <button onClick={() => handleMenuAction(() => handleChangeEstado('pausado'))} style={menuItemStyle('#eab308')}
+                onMouseOver={(e) => e.currentTarget.style.background = '#374151'} onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
+                <PauseCircle size={16} /> Pausar
+              </button>
             </>
+          )}
+          {anime.estado === 'pausado' && (
+            <button onClick={() => handleMenuAction(() => handleChangeEstado('viendo'))} style={menuItemStyle('#10b981')}
+              onMouseOver={(e) => e.currentTarget.style.background = '#374151'} onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
+              <PlayCircle size={16} /> Reanudar
+            </button>
           )}
           {anime.estado === 'completado' && (
             <button onClick={() => handleMenuAction(() => handleChangeEstado('viendo', 0))} style={menuItemStyle()}
@@ -524,7 +547,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
               <PlayCircle size={16} /> Empezar a ver
             </button>
           )}
-          <button onClick={() => handleMenuAction(() => onDelete(anime.id))} style={menuItemStyle('#ef4444', false, true)}
+          <button onClick={() => handleMenuAction(handleDelete)} style={menuItemStyle('#ef4444', false, true)}
             onMouseOver={(e) => e.currentTarget.style.background = '#374151'} onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}>
             <Trash2 size={16} /> Eliminar
           </button>

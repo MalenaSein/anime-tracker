@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-const ANIME_TYPES = [
-  'Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke',
-  'Isekai', 'Mecha', 'Slice of Life', 'Romance', 'Comedia',
-  'Drama', 'Acción', 'Aventura', 'Fantasía', 'Sci-Fi',
-  'Horror', 'Misterio', 'Deportes', 'Musical', 'Ecchi',
-  'Harem', 'Yaoi', 'Yuri', 'Supernatural', 'Otro'
-];
+import { ANIME_TYPES } from '../constants/animeTypes';
 
 const AddAnimeModal = ({ show, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
@@ -14,6 +7,7 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
     tipo: 'Shonen',
     capitulos_vistos: 0
   });
+  const [submitting, setSubmitting] = useState(false);
 
   // Efecto para manejar la tecla Enter
   useEffect(() => {
@@ -33,14 +27,23 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, formData, onClose]);
 
   if (!show) return null;
 
-  const handleSubmit = () => {
-    if (formData.nombre.trim()) {
-      onAdd(formData);
-      setFormData({ nombre: '', tipo: 'Shonen', capitulos_vistos: 0 });
+  const handleSubmit = async () => {
+    if (!formData.nombre.trim() || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const result = await onAdd(formData);
+      // Solo limpiar el formulario si el alta fue exitosa.
+      if (result !== false) {
+        setFormData({ nombre: '', tipo: 'Shonen', capitulos_vistos: 0 });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -188,9 +191,9 @@ const AddAnimeModal = ({ show, onClose, onAdd }) => {
               style={styles.submitButton}
               onMouseOver={(e) => e.target.style.background = '#7c3aed'}
               onMouseOut={(e) => e.target.style.background = '#9333ea'}
-              disabled={!formData.nombre.trim()}
+              disabled={!formData.nombre.trim() || submitting}
             >
-              Agregar
+              {submitting ? 'Agregando...' : 'Agregar'}
             </button>
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Plus, X, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { scheduleAPI } from '../services/api';
 
 const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
   const [schedules, setSchedules] = useState([]);
@@ -7,6 +8,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
   const [selectedCell, setSelectedCell] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     animeId: '',
     day: '',
@@ -48,6 +50,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddModal, formData, selectedCell]);
 
   useEffect(() => {
@@ -56,32 +59,21 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
 
   const loadSchedules = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      
-      const res = await fetch(`${API_URL}/schedules`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      if (!data.error) {
+      const data = await scheduleAPI.getAll();
+      if (Array.isArray(data)) {
         setSchedules(data);
       }
     } catch (err) {
       console.error('Error al cargar horarios:', err);
+      setErrorMsg(err.message || 'No se pudieron cargar los horarios');
     }
   };
-
-  const [errorMsg, setErrorMsg] = useState('');
 
   const handleAddSchedule = async () => {
     if (!formData.animeId || selectedCell === null) return;
     setErrorMsg('');
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      
       const scheduleData = {
         anime_id: parseInt(formData.animeId),
         day: selectedCell.day,
@@ -90,20 +82,7 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
         notification_enabled: true
       };
 
-      const res = await fetch(`${API_URL}/schedules`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(scheduleData)
-      });
-      const data = await res.json();
-      
-      if (!res.ok || data.error) {
-        setErrorMsg(data.error || 'Error al agregar el horario');
-        return;
-      }
+      const data = await scheduleAPI.create(scheduleData);
 
       setSchedules([...schedules, data]);
       setShowAddModal(false);
@@ -112,23 +91,18 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
       setErrorMsg('');
     } catch (err) {
       console.error('Error al agregar horario:', err);
-      setErrorMsg('Error de conexión. Intentá de nuevo.');
+      setErrorMsg(err.message || 'Error de conexión. Intentá de nuevo.');
     }
   };
 
   const handleDeleteSchedule = async (scheduleId) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      
-      await fetch(`${API_URL}/schedules/${scheduleId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
+      await scheduleAPI.delete(scheduleId);
       setSchedules(schedules.filter(s => s.id !== scheduleId));
+      setErrorMsg('');
     } catch (err) {
       console.error('Error al eliminar horario:', err);
+      setErrorMsg(err.message || 'No se pudo eliminar el horario');
     }
   };
 
@@ -831,8 +805,8 @@ const ScheduleCalendar = ({ animes, onUpdateSchedule }) => {
           <h1 style={styles.title}>Calendario de Emisión</h1>
           <p style={styles.subtitle}>
             {isMobile 
-              ? 'Horarios y notificaciones por email'
-              : 'Configura los horarios de tus animes favoritos y recibe notificaciones por email'
+              ? 'Horarios y notificaciones push'
+              : 'Configura los horarios de tus animes favoritos y recibe notificaciones push'
             }
           </p>
         </div>

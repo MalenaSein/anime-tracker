@@ -1,161 +1,143 @@
-const API_URL = process.env.REACT_APP_API_URL || 'https://anime-tracker-yape.onrender.com';
+import { auth } from '../config/firebase';
 
-const getToken = () => localStorage.getItem('token');
+// La URL de producción incluye /api (ver .github/workflows/deploy.yml)
+export const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api')
+  .replace(/\/+$/, '');
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+export const getToken = async (forceRefresh = false) => {
+  if (auth.currentUser) {
+    const token = await auth.currentUser.getIdToken(forceRefresh);
+    localStorage.setItem('token', token);
+    return token;
+  }
+
+  return localStorage.getItem('token');
+};
+
+const notifyExpired = () => {
+  window.dispatchEvent(new Event('auth:expired'));
+};
+
+export const apiFetch = async (path, options = {}, retried = false) => {
+  let token = null;
+
+  try {
+    token = await getToken(false);
+  } catch (error) {
+    token = localStorage.getItem('token');
+  }
+
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    if (!retried) {
+      const freshToken = await getToken(true).catch(() => null);
+      if (freshToken) {
+        return apiFetch(path, options, true);
+      }
+    }
+    notifyExpired();
+  }
+
+  return response;
+};
+
+const parseResponse = async (response) => {
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error || `Error ${response.status}`);
+    error.status = response.status;
+    error.code = data.code;
+    throw error;
+  }
+
+  return data;
+};
+
+const jsonRequest = async (path, options = {}) => {
+  const response = await apiFetch(path, options);
+  return parseResponse(response);
+};
 
 // ============================================
 // API DE AUTENTICACIÓN
 // ============================================
 export const authAPI = {
-  register: async (userData) => {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    return res.json();
-  },
+  register: (userData) => jsonRequest('/auth/register', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(userData)
+  }),
 
-  login: async (credentials) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    });
-    return res.json();
-  },
+  login: (credentials) => jsonRequest('/auth/login', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(credentials)
+  }),
 
-  // ✨ NUEVO - Cambiar nombre de usuario
-  changeUsername: async (newUsername) => {
-    const res = await fetch(`${API_URL}/auth/username`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify({ newUsername })
-    });
-    return res.json();
-  },
+  me: () => jsonRequest('/auth/me'),
 
-  // ✨ NUEVO - Eliminar cuenta
-  deleteAccount: async (password) => {
-    const res = await fetch(`${API_URL}/auth/account`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify({ password })
-    });
-    return res.json();
-  },
+  changeUsername: (newUsername) => jsonRequest('/auth/username', {
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ newUsername })
+  }),
 
-  // ✨ NUEVO - Solicitar recuperación de contraseña
-  forgotPassword: async (email) => {
-    const res = await fetch(`${API_URL}/auth/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    return res.json();
-  },
-
-  // ✨ NUEVO - Resetear contraseña con token
-  resetPassword: async (token, newPassword) => {
-    const res = await fetch(`${API_URL}/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, newPassword })
-    });
-    return res.json();
-  }
+  deleteAccount: (password) => jsonRequest('/auth/account', {
+    method: 'DELETE',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ password })
+  })
 };
 
 // ============================================
 // API DE ANIMES
 // ============================================
 export const animeAPI = {
-  getAll: async () => {
-    const res = await fetch(`${API_URL}/animes`, {
-      headers: { 'Authorization': `Bearer ${getToken()}` }
-    });
-    return res.json();
-  },
+  getAll: () => jsonRequest('/animes'),
 
-  create: async (animeData) => {
-    const res = await fetch(`${API_URL}/animes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify(animeData)
-    });
-    return res.json();
-  },
+  create: (animeData) => jsonRequest('/animes', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(animeData)
+  }),
 
-  // FIX: ahora siempre envía 'tipo' en el update
-  update: async (id, animeData) => {
-    const res = await fetch(`${API_URL}/animes/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify(animeData)
-    });
-    return res.json();
-  },
+  update: (id, animeData) => jsonRequest(`/animes/${id}`, {
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(animeData)
+  }),
 
-  delete: async (id) => {
-    const res = await fetch(`${API_URL}/animes/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getToken()}` }
-    });
-    return res.json();
-  }
+  delete: (id) => jsonRequest(`/animes/${id}`, {
+    method: 'DELETE'
+  })
 };
 
 // ============================================
 // API DE SCHEDULES
 // ============================================
 export const scheduleAPI = {
-  getAll: async () => {
-    const res = await fetch(`${API_URL}/schedules`, {
-      headers: { 'Authorization': `Bearer ${getToken()}` }
-    });
-    return res.json();
-  },
+  getAll: () => jsonRequest('/schedules'),
 
-  create: async (scheduleData) => {
-    const res = await fetch(`${API_URL}/schedules`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify(scheduleData)
-    });
-    return res.json();
-  },
+  create: (scheduleData) => jsonRequest('/schedules', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(scheduleData)
+  }),
 
-  update: async (id, data) => {
-    const res = await fetch(`${API_URL}/schedules/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: JSON.stringify(data)
-    });
-    return res.json();
-  },
+  update: (id, data) => jsonRequest(`/schedules/${id}`, {
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(data)
+  }),
 
-  delete: async (id) => {
-    const res = await fetch(`${API_URL}/schedules/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getToken()}` }
-    });
-    return res.json();
-  }
+  delete: (id) => jsonRequest(`/schedules/${id}`, {
+    method: 'DELETE'
+  })
 };

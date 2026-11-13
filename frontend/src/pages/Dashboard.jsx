@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, PlayCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, PlayCircle } from 'lucide-react';
 import { animeAPI } from '../services/api';
 import AnimeCard from '../components/AnimeCard';
 import AddAnimeModal from '../components/AddAnimeModal';
@@ -9,7 +9,7 @@ import Filters from '../components/Filters';
 import Statistics from '../components/Statistics';
 import ScheduleCalendar from '../components/ScheduleCalendar';
 import MusicPlayer from '../components/MusicPlayer';
-import { auth } from '../config/firebase';
+import { ANIME_TYPES } from '../constants/animeTypes';
 
 const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [animes, setAnimes] = useState([]);
@@ -22,6 +22,16 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentUser, setCurrentUser] = useState(user);
   const [filters, setFilters] = useState({ tipo: '', rating: '', sortBy: 'updated' });
+  const [message, setMessage] = useState(null);
+  const messageTimer = useRef(null);
+
+  const notify = (type, text) => {
+    setMessage({ type, text });
+    clearTimeout(messageTimer.current);
+    messageTimer.current = setTimeout(() => setMessage(null), 4000);
+  };
+
+  useEffect(() => () => clearTimeout(messageTimer.current), []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -29,44 +39,16 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadAnimes(); }, []);
-
-  const ANIME_TYPES = [
-    'Shonen', 'Shojo', 'Seinen', 'Josei', 'Kodomomuke',
-    'Isekai', 'Mecha', 'Slice of Life', 'Romance', 'Comedia',
-    'Drama', 'Acción', 'Aventura', 'Fantasía', 'Sci-Fi',
-    'Horror', 'Misterio', 'Deportes', 'Musical', 'Ecchi',
-    'Harem', 'Yaoi', 'Yuri', 'Supernatural', 'Otro'
-  ];
 
   const loadAnimes = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-
-      // Obtener siempre un token fresco antes de hacer el fetch.
-      // Esto evita el 401 que ocurre cuando el token expiró mientras
-      // la app estaba abierta pero sin actividad (Render sleep, etc.)
-      let token = localStorage.getItem('token');
-      if (auth.currentUser) {
-        token = await auth.currentUser.getIdToken(true);
-        localStorage.setItem('token', token);
-      }
-
-      const res = await fetch(`${API_URL}/animes`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (res.status === 401) {
-        // Token inválido incluso después del refresh — forzar re-login
-        console.error('401 al cargar animes — sesión inválida');
-        setLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      if (!data.error && Array.isArray(data)) setAnimes(data);
+      const data = await animeAPI.getAll();
+      if (Array.isArray(data)) setAnimes(data);
     } catch (err) {
       console.error('Error al cargar animes:', err);
+      notify('error', err.message || 'No se pudieron cargar los animes');
     } finally {
       setLoading(false);
     }
@@ -74,64 +56,54 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
 
   const addAnime = async (formData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/animes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (!data.error) {
-        setAnimes([...animes, data]);
-        setShowAddModal(false);
-      }
+      const data = await animeAPI.create(formData);
+      setAnimes((previous) => [...previous, data]);
+      setShowAddModal(false);
+      notify('success', 'Anime agregado correctamente');
+      return true;
     } catch (err) {
       console.error('Error al agregar anime:', err);
+      notify('error', err.message || 'No se pudo agregar el anime');
+      return false;
     }
   };
 
   const addNewSeason = async (id) => {
     const anime = animes.find(a => a.id === id);
     if (anime) {
-      await updateAnime(id, {
+      const success = await updateAnime(id, {
         capitulos_vistos: anime.capitulos_vistos,
-        estado: 'viendo', calificacion: 0,
-        nombre: anime.nombre, tipo: anime.tipo
+        estado: 'viendo',
+        calificacion: 0,
+        nombre: anime.nombre,
+        tipo: anime.tipo
       });
-      setShowSeasonModal(false);
+      if (success) setShowSeasonModal(false);
     }
   };
 
   const updateAnime = async (id, updatedData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/animes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(updatedData)
-      });
-      const data = await res.json();
-      if (!data.error) {
-        setAnimes(animes.map(a => a.id === id ? data : a));
-      }
+      const data = await animeAPI.update(id, updatedData);
+      setAnimes((previous) => previous.map(a => a.id === id ? data : a));
+      return true;
     } catch (err) {
       console.error('Error al actualizar anime:', err);
+      notify('error', err.message || 'No se pudo actualizar el anime');
+      return false;
     }
   };
 
   const deleteAnime = async (id) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/animes/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setAnimes(animes.filter(a => a.id !== id));
+      await animeAPI.delete(id);
+      setAnimes((previous) => previous.filter(a => a.id !== id));
+      notify('success', 'Anime eliminado');
+      return true;
     } catch (err) {
       console.error('Error al eliminar anime:', err);
+      notify('error', err.message || 'No se pudo eliminar el anime');
+      return false;
     }
   };
 
@@ -165,7 +137,8 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   // Tabs configuración
   const tabs = [
     { id: 'viendo', label: 'Viendo', color: '#6366f1' },
-    { id: 'por_ver', label: 'Por Ver', color: '#0ea5e9' },  // ✨ NUEVO
+    { id: 'por_ver', label: 'Por Ver', color: '#0ea5e9' },
+    { id: 'pausado', label: 'Pausados', color: '#eab308' },
     { id: 'completado', label: 'Completados', color: '#10b981' },
     { id: 'abandonado', label: 'Abandonados', color: '#f59e0b' },
   ];
@@ -224,6 +197,24 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
     <div style={styles.container}>
       <div style={styles.content}>
         <Navbar user={currentUser} onLogout={onLogout} onUserUpdated={handleUserUpdated} />
+
+        {message && (
+          <div
+            role="status"
+            style={{
+              marginBottom: '1rem',
+              padding: '0.75rem 1rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              background: message.type === 'error' ? '#7f1d1d' : '#064e3b',
+              border: `1px solid ${message.type === 'error' ? '#991b1b' : '#065f46'}`,
+              color: message.type === 'error' ? '#fca5a5' : '#6ee7b7'
+            }}
+          >
+            {message.text}
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={styles.tabContainer}>
@@ -322,6 +313,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
                 <div style={styles.emptyState}>
                   {activeTab === 'viendo' && '🎬 No hay animes en esta categoría'}
                   {activeTab === 'por_ver' && '📋 No hay animes en "Por Ver". ¡Agregá algunos!'}
+                  {activeTab === 'pausado' && '⏸️ No hay animes pausados'}
                   {activeTab === 'completado' && '✅ No hay animes completados con estos filtros'}
                   {activeTab === 'abandonado' && '🚫 No hay animes abandonados con estos filtros'}
                 </div>
@@ -353,7 +345,6 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
           show={showAddModal}
           onClose={() => setShowAddModal(false)}
           onAdd={(formData) => addAnime({ ...formData, estado: activeTab === 'por_ver' ? 'por_ver' : 'viendo' })}
-          defaultEstado={activeTab === 'por_ver' ? 'por_ver' : 'viendo'}
         />
 
         <SeasonModal

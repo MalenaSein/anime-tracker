@@ -1,71 +1,30 @@
 // ============================================
-// src/hooks/useAuth.js  (FRONTEND)
-// Hook que reemplaza el sistema de login/registro con Firebase
-// Compatible con el modo dual del backend durante la transición
+// src/hooks/useAuth.js (FRONTEND)
+// Acciones de autenticación con Firebase.
+// El estado de sesión global lo maneja App.js con onIdTokenChanged.
 // ============================================
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  onAuthStateChanged,
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 
 export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ============================================
-  // Escuchar cambios de sesión
-  // ============================================
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Obtener el ID Token para mandarlo al backend
-        const token = await firebaseUser.getIdToken();
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify({
-          id: firebaseUser.uid,
-          username: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          email: firebaseUser.email
-        }));
-        setUser({
-          id: firebaseUser.uid,
-          username: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL
-        });
-      } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // ============================================
-  // El token de Firebase expira cada hora
-  // Este helper lo renueva automáticamente
-  // ============================================
   const getFreshToken = async () => {
     if (!auth.currentUser) return null;
-    const token = await auth.currentUser.getIdToken(true); // true = forzar refresh
+    const token = await auth.currentUser.getIdToken(true);
     localStorage.setItem('token', token);
     return token;
   };
 
-  // ============================================
-  // LOGIN con email y password
-  // ============================================
   const login = async (email, password) => {
     try {
       setError(null);
@@ -80,15 +39,10 @@ export const useAuth = () => {
     }
   };
 
-  // ============================================
-  // REGISTRO con email y password
-  // ============================================
   const register = async (email, password, username) => {
     try {
       setError(null);
       const result = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Guardar el displayName (username)
       await updateProfile(result.user, { displayName: username });
 
       const token = await result.user.getIdToken();
@@ -102,9 +56,6 @@ export const useAuth = () => {
     }
   };
 
-  // ============================================
-  // LOGIN con Google
-  // ============================================
   const loginWithGoogle = async () => {
     try {
       setError(null);
@@ -113,7 +64,6 @@ export const useAuth = () => {
       localStorage.setItem('token', token);
       return { success: true, user: result.user };
     } catch (err) {
-      // El usuario cerró el popup — no es un error real
       if (err.code === 'auth/popup-closed-by-user') {
         return { success: false, cancelled: true };
       }
@@ -123,19 +73,12 @@ export const useAuth = () => {
     }
   };
 
-  // ============================================
-  // LOGOUT
-  // ============================================
   const logout = async () => {
     await signOut(auth);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   };
 
-  // ============================================
-  // RECUPERAR CONTRASEÑA
-  // Firebase manda el email automáticamente — no necesitás PIN
-  // ============================================
   const resetPassword = async (email) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -147,8 +90,6 @@ export const useAuth = () => {
   };
 
   return {
-    user,
-    loading,
     error,
     login,
     register,
@@ -159,9 +100,6 @@ export const useAuth = () => {
   };
 };
 
-// ============================================
-// Mensajes de error en español
-// ============================================
 function getFirebaseErrorMessage(code) {
   const messages = {
     'auth/user-not-found': 'No existe una cuenta con ese email',
