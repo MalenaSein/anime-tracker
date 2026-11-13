@@ -1,67 +1,82 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
-const crypto = require('crypto');
+const admin = require('../config/firebase');
+const {
+  isNonEmptyString,
+  isValidEmail
+} = require('../utils/validation');
 
-// Helper: hashear PIN
-const hashPin = (pin) => crypto.createHash('sha256').update(pin).digest('hex');
+const signToken = (user) => jwt.sign(
+  { id: user.id, username: user.username },
+  process.env.JWT_SECRET,
+  { expiresIn: '7d' }
+);
 
 // ============================================
-// REGISTRO DE USUARIO
+// REGISTRO DE USUARIO (legacy email + password)
 // ============================================
 exports.register = async (req, res) => {
   try {
-    const { username, email, password, recovery_pin } = req.body;
-    console.log('📝 Intento de registro:', { username, email });
+    const { username, email, password } = req.body;
 
-    // Validar PIN
-    if (!recovery_pin || !/^\d{4}$/.test(recovery_pin)) {
-      return res.status(400).json({ error: 'El PIN de recuperación debe ser 4 dígitos numéricos' });
+    if (!isNonEmptyString(username) || username.trim().length < 3 || username.trim().length > 50) {
+      return res.status(400).json({ error: 'El nombre de usuario debe tener entre 3 y 50 caracteres' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'El email no es válido' });
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
+    const trimmedUsername = username.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
     const [existingUser] = await db.query(
-      'SELECT * FROM usuarios WHERE email = ? OR username = ?',
-      [email, username]
+      'SELECT id FROM usuarios WHERE email = ? OR username = ?',
+      [normalizedEmail, trimmedUsername]
     );
     if (existingUser.length > 0) {
       return res.status(400).json({ error: 'Usuario o email ya existe' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedPin = hashPin(recovery_pin);
 
     const [result] = await db.query(
-      'INSERT INTO usuarios (username, email, password, recovery_pin) VALUES (?, ?, ?, ?)',
-      [username, email, hashedPassword, hashedPin]
+      'INSERT INTO usuarios (username, email, password) VALUES (?, ?, ?)',
+      [trimmedUsername, normalizedEmail, hashedPassword]
     );
 
-    const token = jwt.sign(
-      { id: result.insertId, username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const user = { id: result.insertId, username: trimmedUsername, email: normalizedEmail };
 
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
-      token,
-      user: { id: result.insertId, username, email }
+      token: signToken(user),
+      user
     });
 
   } catch (error) {
     console.error('❌ Error en registro:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
 // ============================================
-// LOGIN DE USUARIO
+// LOGIN DE USUARIO (legacy email + password)
 // ============================================
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('🔐 Intento de login:', email);
 
-    const [users] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+    if (!isValidEmail(email) || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
+    }
+
+    const [users] = await db.query(
+      'SELECT * FROM usuarios WHERE email = ?',
+      [email.trim().toLowerCase()]
+    );
     if (users.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
@@ -72,21 +87,36 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     res.json({
       message: 'Login exitoso',
-      token,
+      token: signToken(user),
       user: { id: user.id, username: user.username, email: user.email }
     });
 
   } catch (error) {
     console.error('❌ Error en login:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// DATOS DEL USUARIO ACTUAL
+// ============================================
+exports.getMe = async (req, res) => {
+  try {
+    const [users] = await db.query(
+      'SELECT id, username, email FROM usuarios WHERE id = ?',
+      [req.user.id]
+    );
+    if (users.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    res.json({
+      ...users[0],
+      authMethod: req.user.authMethod
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
@@ -98,34 +128,43 @@ exports.changeUsername = async (req, res) => {
     const userId = req.user.id;
     const { newUsername } = req.body;
 
-    if (!newUsername || newUsername.trim().length < 3) {
-      return res.status(400).json({ error: 'El nombre de usuario debe tener al menos 3 caracteres' });
+    if (!isNonEmptyString(newUsername) || newUsername.trim().length < 3 || newUsername.trim().length > 50) {
+      return res.status(400).json({ error: 'El nombre de usuario debe tener entre 3 y 50 caracteres' });
     }
+
+    const username = newUsername.trim();
 
     const [existing] = await db.query(
       'SELECT id FROM usuarios WHERE username = ? AND id != ?',
-      [newUsername.trim(), userId]
+      [username, userId]
     );
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
     }
 
-    await db.query('UPDATE usuarios SET username = ? WHERE id = ?', [newUsername.trim(), userId]);
+    await db.query('UPDATE usuarios SET username = ? WHERE id = ?', [username, userId]);
+
+    // Mantener Firebase sincronizado para que el nombre persista al recargar.
+    if (req.user.firebase_uid && admin.apps.length) {
+      try {
+        await admin.auth().updateUser(req.user.firebase_uid, { displayName: username });
+      } catch (firebaseError) {
+        console.error('⚠️ No se pudo actualizar displayName en Firebase:', firebaseError.message);
+      }
+    }
 
     const [updatedUser] = await db.query(
       'SELECT id, username, email FROM usuarios WHERE id = ?', [userId]
     );
 
-    const newToken = jwt.sign(
-      { id: updatedUser[0].id, username: updatedUser[0].username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({ message: 'Nombre actualizado', token: newToken, user: updatedUser[0] });
+    res.json({
+      message: 'Nombre actualizado',
+      token: signToken(updatedUser[0]),
+      user: updatedUser[0]
+    });
   } catch (error) {
     console.error('❌ Error cambiando username:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
@@ -140,151 +179,34 @@ exports.deleteAccount = async (req, res) => {
     const [users] = await db.query('SELECT * FROM usuarios WHERE id = ?', [userId]);
     if (users.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const isValidPassword = await bcrypt.compare(password, users[0].password);
-    if (!isValidPassword) return res.status(401).json({ error: 'Contraseña incorrecta' });
+    const user = users[0];
+    const isFirebaseOnly = Boolean(user.firebase_uid) && user.password === 'FIREBASE_AUTH';
+
+    // Las cuentas creadas por Firebase no tienen contraseña local.
+    // Las cuentas legacy (o vinculadas) sí la requieren por seguridad.
+    if (!isFirebaseOnly) {
+      if (typeof password !== 'string' || !password) {
+        return res.status(400).json({ error: 'Debés ingresar tu contraseña' });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+
+    if (user.firebase_uid && admin.apps.length) {
+      try {
+        await admin.auth().deleteUser(user.firebase_uid);
+      } catch (firebaseError) {
+        if (firebaseError.code !== 'auth/user-not-found') {
+          console.error('⚠️ No se pudo eliminar el usuario de Firebase:', firebaseError.message);
+        }
+      }
+    }
 
     await db.query('DELETE FROM usuarios WHERE id = ?', [userId]);
     res.json({ message: 'Cuenta eliminada exitosamente' });
   } catch (error) {
     console.error('❌ Error eliminando cuenta:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// ============================================
-// VERIFICAR SI EMAIL EXISTE Y TIENE PIN
-// POST /api/auth/check-recovery
-// ============================================
-exports.checkRecovery = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const [users] = await db.query(
-      'SELECT id, recovery_pin FROM usuarios WHERE email = ?', [email]
-    );
-
-    if (users.length === 0) {
-      // No revelamos si existe o no por seguridad, pero en este caso
-      // el flujo necesita saberlo para mostrar el mensaje correcto
-      return res.json({ exists: false });
-    }
-
-    res.json({
-      exists: true,
-      hasPin: !!users[0].recovery_pin
-    });
-  } catch (error) {
-    console.error('❌ Error en check-recovery:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// ============================================
-// CAMBIAR CONTRASEÑA CON PIN
-// POST /api/auth/reset-password-pin
-// ============================================
-exports.resetPasswordWithPin = async (req, res) => {
-  try {
-    const { email, pin, newPassword } = req.body;
-
-    if (!pin || !/^\d{4}$/.test(pin)) {
-      return res.status(400).json({ error: 'PIN inválido' });
-    }
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
-    }
-
-    const hashedPin = hashPin(pin);
-
-    const [users] = await db.query(
-      'SELECT id FROM usuarios WHERE email = ? AND recovery_pin = ?',
-      [email, hashedPin]
-    );
-
-    if (users.length === 0) {
-      return res.status(400).json({ error: 'PIN incorrecto' });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE usuarios SET password = ? WHERE id = ?', [hashedPassword, users[0].id]);
-
-    console.log('✅ Contraseña reseteada con PIN para:', email);
-    res.json({ message: 'Contraseña actualizada exitosamente' });
-  } catch (error) {
-    console.error('❌ Error reseteando contraseña con PIN:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// ============================================
-// CREAR PIN PARA USUARIO SIN PIN (una sola vez)
-// POST /api/auth/setup-pin
-// Requiere: email + username exacto + nuevo PIN
-// ============================================
-exports.setupPin = async (req, res) => {
-  try {
-    const { email, username, pin } = req.body;
-
-    if (!pin || !/^\d{4}$/.test(pin)) {
-      return res.status(400).json({ error: 'El PIN debe ser 4 dígitos numéricos' });
-    }
-
-    // Verificar que email + username coincidan Y que no tenga PIN
-    const [users] = await db.query(
-      'SELECT id, recovery_pin FROM usuarios WHERE email = ? AND username = ?',
-      [email, username]
-    );
-
-    if (users.length === 0) {
-      return res.status(400).json({ error: 'Email o nombre de usuario incorrectos' });
-    }
-
-    if (users[0].recovery_pin) {
-      return res.status(400).json({ error: 'Esta cuenta ya tiene un PIN configurado' });
-    }
-
-    const hashedPin = hashPin(pin);
-    await db.query('UPDATE usuarios SET recovery_pin = ? WHERE id = ?', [hashedPin, users[0].id]);
-
-    console.log('✅ PIN configurado para usuario ID:', users[0].id);
-    res.json({ message: 'PIN configurado exitosamente' });
-  } catch (error) {
-    console.error('❌ Error configurando PIN:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// ============================================
-// CAMBIAR PIN (desde perfil, autenticado)
-// PUT /api/auth/change-pin
-// ============================================
-exports.changePin = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { currentPin, newPin } = req.body;
-
-    if (!newPin || !/^\d{4}$/.test(newPin)) {
-      return res.status(400).json({ error: 'El nuevo PIN debe ser 4 dígitos' });
-    }
-
-    const [users] = await db.query('SELECT recovery_pin FROM usuarios WHERE id = ?', [userId]);
-    if (users.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-    // Si ya tiene PIN, verificar el actual
-    if (users[0].recovery_pin) {
-      if (!currentPin) return res.status(400).json({ error: 'Debés ingresar tu PIN actual' });
-      const hashedCurrent = hashPin(currentPin);
-      if (hashedCurrent !== users[0].recovery_pin) {
-        return res.status(400).json({ error: 'PIN actual incorrecto' });
-      }
-    }
-
-    const hashedNewPin = hashPin(newPin);
-    await db.query('UPDATE usuarios SET recovery_pin = ? WHERE id = ?', [hashedNewPin, userId]);
-
-    res.json({ message: 'PIN actualizado exitosamente' });
-  } catch (error) {
-    console.error('❌ Error cambiando PIN:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

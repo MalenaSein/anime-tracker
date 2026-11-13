@@ -1,21 +1,80 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// ============================================
+// VALIDACIÓN DE VARIABLES DE ENTORNO
+// ============================================
+const REQUIRED_ENV = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'JWT_SECRET'];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+
+if (missingEnv.length > 0) {
+  console.error('💥 Faltan variables de entorno obligatorias:', missingEnv.join(', '));
+  console.error('   Revisá backend/.env.example');
+  process.exit(1);
+}
 
 const authRoutes = require('./routes/authRoutes');
 const animeRoutes = require('./routes/animeRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
-const pushRoutes = require('./routes/pushRoutes'); // 🆕 NUEVO
+const pushRoutes = require('./routes/pushRoutes');
 const initDatabase = require('./initDatabase');
 const { scheduleNotifications } = require('./jobs/notificationScheduler');
 
 const app = express();
 
+// Render está detrás de un proxy
+app.set('trust proxy', 1);
+
 // ============================================
 // MIDDLEWARES
 // ============================================
-app.use(cors());
-app.use(express.json());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://malenasein.github.io'
+];
+const allowedOrigins = (process.env.CORS_ORIGIN || defaultOrigins.join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origen no permitido por CORS'));
+  }
+}));
+
+app.use(express.json({ limit: '100kb' }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones. Intentá nuevamente en unos minutos.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Intentá nuevamente en unos minutos.' }
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
@@ -23,12 +82,8 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// FIX RENDER SLEEP — agregar esto en server.js
-// Pegalo junto a las otras rutas (antes del 404)
+// HEALTH CHECK
 // ============================================
- 
-// Endpoint de ping para que UptimeRobot mantenga el servidor despierto
-// UptimeRobot lo llama cada 5 minutos gratis → Render nunca duerme
 app.get('/ping', (req, res) => {
   res.json({
     status: 'ok',
@@ -41,14 +96,14 @@ app.get('/ping', (req, res) => {
 // RUTAS
 // ============================================
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'API de Anime Tracker funcionando',
     version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
       animes: '/api/animes',
       schedules: '/api/schedules',
-      push: '/api/push' // 🆕 NUEVO
+      push: '/api/push'
     }
   });
 });
@@ -56,7 +111,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/animes', animeRoutes);
 app.use('/api/schedules', scheduleRoutes);
-app.use('/api/push', pushRoutes); // 🆕 NUEVO
+app.use('/api/push', pushRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
@@ -66,11 +121,13 @@ app.use((req, res) => {
 // MANEJO DE ERRORES GLOBAL
 // ============================================
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
-  res.status(500).json({ 
-    error: 'Error interno del servidor',
-    message: err.message 
-  });
+  console.error('❌ Error:', err.message);
+
+  if (err.message === 'Origen no permitido por CORS') {
+    return res.status(403).json({ error: err.message });
+  }
+
+  res.status(500).json({ error: 'Error interno del servidor' });
 });
 
 // ============================================
@@ -80,19 +137,15 @@ const PORT = process.env.PORT || 3001;
 
 async function startServer() {
   try {
-    // 1. Crear tablas si no existen
     await initDatabase();
-    
-    // 2. Iniciar el scheduler de notificaciones 🆕 NUEVO
     scheduleNotifications();
-    
-    // 3. Iniciar servidor
+
     app.listen(PORT, () => {
       console.log('');
       console.log('╔═══════════════════════════════════════╗');
       console.log('🚀 Servidor corriendo en puerto', PORT);
       console.log('🔗 URL:', `http://localhost:${PORT}`);
-      console.log('📧 Sistema de notificaciones: ACTIVO'); // 🆕 NUEVO
+      console.log('📧 Sistema de notificaciones: ACTIVO');
       console.log('╚═══════════════════════════════════════╝');
       console.log('');
     });

@@ -18,7 +18,15 @@ async function obtenerImagenAnime(nombreAnime) {
     // Documentación: https://docs.api.jikan.moe/
     const searchUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(nombreAnime)}&limit=1`;
 
-    const response = await fetch(searchUrl);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let response;
+    try {
+      response = await fetch(searchUrl, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
     
     if (!response.ok) {
       console.log('⚠️ Error en la búsqueda de imagen');
@@ -52,7 +60,7 @@ async function obtenerImagenAnime(nombreAnime) {
  */
 function obtenerImagenPorDefecto() {
   // Imagen placeholder de anime genérica
-  return 'https://via.placeholder.com/225x350/9333ea/ffffff?text=Anime';
+  return 'https://placehold.co/225x350/9333ea/ffffff?text=Anime';
 }
 
 module.exports = {

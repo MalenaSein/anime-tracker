@@ -1,5 +1,12 @@
 const db = require('../config/database');
 const { obtenerImagenAnime, obtenerImagenPorDefecto } = require('../services/imageService');
+const {
+  ESTADOS_ANIME,
+  isNonEmptyString,
+  toInteger,
+  isValidEstado,
+  isValidRating
+} = require('../utils/validation');
 
 // ============================================
 // OBTENER TODOS LOS ANIMES DE UN USUARIO
@@ -14,7 +21,7 @@ exports.getAnimes = async (req, res) => {
     res.json(animes);
   } catch (error) {
     console.error('❌ Error obteniendo animes:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
@@ -26,21 +33,33 @@ exports.createAnime = async (req, res) => {
     const userId = req.user.id;
     const { nombre, tipo, capitulos_vistos, estado } = req.body;
 
-    console.log('➕ Creando anime:', nombre);
+    if (!isNonEmptyString(nombre)) {
+      return res.status(400).json({ error: 'El nombre del anime es obligatorio' });
+    }
 
-    let imagen_url = await obtenerImagenAnime(nombre);
+    const caps = capitulos_vistos === undefined ? 0 : toInteger(capitulos_vistos);
+    if (caps === null || caps < 0) {
+      return res.status(400).json({ error: 'Los capítulos vistos deben ser un número entero mayor o igual a 0' });
+    }
+
+    const estadoValido = estado === undefined
+      ? 'viendo'
+      : (isValidEstado(estado) ? estado : null);
+    if (estadoValido === null) {
+      return res.status(400).json({ error: `Estado inválido. Valores permitidos: ${ESTADOS_ANIME.join(', ')}` });
+    }
+
+    const tipoValido = isNonEmptyString(tipo) ? tipo.trim() : 'Desconocido';
+    const nombreAnime = nombre.trim();
+
+    let imagen_url = await obtenerImagenAnime(nombreAnime);
     if (!imagen_url) {
       imagen_url = obtenerImagenPorDefecto();
     }
 
-    // Validar estado (incluye 'por_ver')
-    const estadoValido = ['viendo', 'completado', 'pausado', 'abandonado', 'por_ver'].includes(estado)
-      ? estado
-      : 'viendo';
-
     const [result] = await db.query(
       'INSERT INTO animes (user_id, nombre, imagen_url, tipo, capitulos_vistos, estado) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, nombre, imagen_url, tipo, capitulos_vistos || 0, estadoValido]
+      [userId, nombreAnime, imagen_url, tipoValido, caps, estadoValido]
     );
 
     const [newAnime] = await db.query(
@@ -52,13 +71,12 @@ exports.createAnime = async (req, res) => {
     res.status(201).json(newAnime[0]);
   } catch (error) {
     console.error('❌ Error creando anime:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
 // ============================================
 // ACTUALIZAR UN ANIME
-// FIX: Se incluye 'tipo' en el UPDATE para que no se pierda al editar
 // ============================================
 exports.updateAnime = async (req, res) => {
   try {
@@ -66,12 +84,30 @@ exports.updateAnime = async (req, res) => {
     const userId = req.user.id;
     const { nombre, capitulos_vistos, estado, calificacion, tipo } = req.body;
 
-    console.log('🔄 Actualizando anime ID:', id, '| tipo recibido:', tipo);
+    const animeId = toInteger(id);
+    if (animeId === null) {
+      return res.status(400).json({ error: 'ID de anime inválido' });
+    }
 
-    // Obtener el anime actual para no perder campos no enviados
+    if (nombre !== undefined && !isNonEmptyString(nombre)) {
+      return res.status(400).json({ error: 'El nombre del anime no puede estar vacío' });
+    }
+    if (estado !== undefined && !isValidEstado(estado)) {
+      return res.status(400).json({ error: `Estado inválido. Valores permitidos: ${ESTADOS_ANIME.join(', ')}` });
+    }
+    if (!isValidRating(calificacion)) {
+      return res.status(400).json({ error: 'La calificación debe ser un entero entre 0 y 5' });
+    }
+    if (capitulos_vistos !== undefined) {
+      const caps = toInteger(capitulos_vistos);
+      if (caps === null || caps < 0) {
+        return res.status(400).json({ error: 'Los capítulos vistos deben ser un número entero mayor o igual a 0' });
+      }
+    }
+
     const [currentAnime] = await db.query(
       'SELECT * FROM animes WHERE id = ? AND user_id = ?',
-      [id, userId]
+      [animeId, userId]
     );
 
     if (currentAnime.length === 0) {
@@ -80,18 +116,17 @@ exports.updateAnime = async (req, res) => {
 
     const current = currentAnime[0];
 
-    // Usar los valores enviados, o los actuales si no se envían
-    const updatedNombre = nombre !== undefined ? nombre : current.nombre;
-    const updatedTipo = tipo !== undefined ? tipo : current.tipo;  // ← FIX CRÍTICO
-    const updatedCaps = capitulos_vistos !== undefined ? capitulos_vistos : current.capitulos_vistos;
+    const updatedNombre = nombre !== undefined ? nombre.trim() : current.nombre;
+    const updatedTipo = tipo !== undefined ? (isNonEmptyString(tipo) ? tipo.trim() : 'Desconocido') : current.tipo;
+    const updatedCaps = capitulos_vistos !== undefined ? toInteger(capitulos_vistos) : current.capitulos_vistos;
     const updatedEstado = estado !== undefined ? estado : current.estado;
     const updatedCalificacion = calificacion !== undefined ? calificacion : current.calificacion;
 
     const [result] = await db.query(
-      `UPDATE animes 
+      `UPDATE animes
        SET nombre = ?, tipo = ?, capitulos_vistos = ?, estado = ?, calificacion = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
-      [updatedNombre, updatedTipo, updatedCaps, updatedEstado, updatedCalificacion, id, userId]
+      [updatedNombre, updatedTipo, updatedCaps, updatedEstado, updatedCalificacion, animeId, userId]
     );
 
     if (result.affectedRows === 0) {
@@ -100,14 +135,13 @@ exports.updateAnime = async (req, res) => {
 
     const [updatedAnime] = await db.query(
       'SELECT * FROM animes WHERE id = ?',
-      [id]
+      [animeId]
     );
 
-    console.log('✅ Anime actualizado - tipo guardado:', updatedAnime[0].tipo);
     res.json(updatedAnime[0]);
   } catch (error) {
     console.error('❌ Error actualizando anime:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
@@ -119,9 +153,14 @@ exports.deleteAnime = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
+    const animeId = toInteger(id);
+    if (animeId === null) {
+      return res.status(400).json({ error: 'ID de anime inválido' });
+    }
+
     const [result] = await db.query(
       'DELETE FROM animes WHERE id = ? AND user_id = ?',
-      [id, userId]
+      [animeId, userId]
     );
 
     if (result.affectedRows === 0) {
@@ -131,6 +170,6 @@ exports.deleteAnime = async (req, res) => {
     res.json({ message: 'Anime eliminado exitosamente' });
   } catch (error) {
     console.error('❌ Error eliminando anime:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

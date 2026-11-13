@@ -40,6 +40,7 @@ const saveSubscription = async (userId, subscription) => {
       `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at)
        VALUES (?, ?, ?, ?, NOW())
        ON DUPLICATE KEY UPDATE 
+         user_id = VALUES(user_id),
          endpoint = VALUES(endpoint),
          p256dh = VALUES(p256dh),
          auth = VALUES(auth),
@@ -85,21 +86,20 @@ const sendEpisodeNotification = async (userEmail, animeName, episodeTime) => {
       return false;
     }
 
-    // Payload de la notificación
+    // Payload de la notificación.
+    // No enviamos icon/badge porque el Service Worker ya los resuelve
+    // usando el base path correcto del deploy.
     const payload = JSON.stringify({
       title: '🎬 Nuevo episodio!',
       body: `${animeName} - ${episodeTime}`,
-      icon: '/icon-192.png',
-      badge: '/badge-72.png',
       tag: `anime-${animeName}`,
       data: {
-        url: '/',
         anime: animeName,
         time: episodeTime
       },
       actions: [
         { action: 'open', title: 'Ver ahora' },
-        { action: 'close', title: 'Cerrar' }
+        { action: 'dismiss', title: 'Cerrar' }
       ]
     });
 
@@ -142,28 +142,7 @@ const sendEpisodeNotification = async (userEmail, animeName, episodeTime) => {
   }
 };
 
-// ============================================
-// FUNCIÓN DUMMY PARA COMPATIBILIDAD
-// ============================================
-// Como ya no usamos emails para reset de contraseña,
-// esta función simplemente genera un código de 6 dígitos
-const sendPasswordResetEmail = async (userEmail, username, resetUrl) => {
-  console.log('⚠️ sendPasswordResetEmail llamado, pero ya no enviamos emails');
-  console.log('   En su lugar, usa códigos de verificación de 6 dígitos');
-  
-  // Generar código de 6 dígitos
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  console.log(`📋 Código de recuperación para ${userEmail}: ${code}`);
-  
-  // Aquí podrías guardar el código en la DB
-  // y mostrarlo en pantalla en vez de enviarlo por email
-  
-  return { code, success: false, message: 'Email service disabled' };
-};
-
-module.exports = { 
-  sendEpisodeNotification, 
-  sendPasswordResetEmail,
-  saveSubscription 
+module.exports = {
+  sendEpisodeNotification,
+  saveSubscription
 };

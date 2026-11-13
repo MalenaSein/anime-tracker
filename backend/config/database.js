@@ -12,8 +12,9 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   ssl: {
-    // Aiven requiere SSL pero rechaza certificados auto-firmados
-    rejectUnauthorized: false
+    // Aiven usa certificados válidos. Si tu proveedor usa un certificado
+    // auto-firmado, podés desactivar la validación con DB_SSL_REJECT_UNAUTHORIZED=false.
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
   }
 });
 

@@ -14,18 +14,29 @@ router.post('/subscribe', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const subscription = req.body;
 
+    if (
+      !subscription ||
+      typeof subscription.endpoint !== 'string' ||
+      !subscription.endpoint ||
+      !subscription.keys ||
+      typeof subscription.keys.p256dh !== 'string' ||
+      typeof subscription.keys.auth !== 'string'
+    ) {
+      return res.status(400).json({ error: 'Suscripción push inválida' });
+    }
+
     console.log('📬 Nueva suscripción push para usuario:', userId);
 
     await saveSubscription(userId, subscription);
 
-    res.json({ 
+    res.json({
       message: 'Suscripción guardada exitosamente',
-      success: true 
+      success: true
     });
 
   } catch (error) {
     console.error('❌ Error guardando suscripción:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -35,6 +46,10 @@ router.delete('/unsubscribe', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { endpoint } = req.body;
+
+    if (typeof endpoint !== 'string' || !endpoint) {
+      return res.status(400).json({ error: 'Endpoint inválido' });
+    }
 
     const db = require('../config/database');
     await db.query(
@@ -51,7 +66,7 @@ router.delete('/unsubscribe', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error eliminando suscripción:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

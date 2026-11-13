@@ -27,10 +27,12 @@ async function initDatabase() {
           username VARCHAR(50) NOT NULL UNIQUE,
           email VARCHAR(100) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
+          firebase_uid VARCHAR(255) NULL,
           recovery_pin VARCHAR(255),
           reset_token VARCHAR(255),
           reset_token_expiry DATETIME,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_firebase_uid (firebase_uid),
           INDEX idx_email (email),
           INDEX idx_username (username)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -60,8 +62,21 @@ async function initDatabase() {
 
       if (!colNames.includes('firebase_uid')) {
         await db.query(`ALTER TABLE usuarios ADD COLUMN firebase_uid VARCHAR(255) NULL`);
-        await db.query(`ALTER TABLE usuarios ADD INDEX idx_firebase_uid (firebase_uid)`).catch(() => {});
         console.log('✅ Columna firebase_uid agregada a usuarios');
+      }
+
+      // Asegurar índice UNIQUE (puede fallar si hubiera duplicados históricos)
+      const [uidIndexes] = await db.query(`
+        SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios'
+        AND COLUMN_NAME = 'firebase_uid' AND NON_UNIQUE = 0
+      `);
+      if (uidIndexes.length === 0) {
+        await db.query(`ALTER TABLE usuarios ADD UNIQUE INDEX unique_firebase_uid (firebase_uid)`)
+          .catch((error) => {
+            console.warn('⚠️ No se pudo crear el índice UNIQUE de firebase_uid:', error.message);
+          });
+        console.log('✅ Índice UNIQUE de firebase_uid verificado');
       }
 
       console.log('✅ Tabla "usuarios" verificada');
