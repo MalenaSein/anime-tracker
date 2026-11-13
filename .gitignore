@@ -7,6 +7,10 @@ node_modules/
 .env.*
 !.env.example
 
+# Credenciales de Firebase (NUNCA commitear)
+firebase-service-account.json
+**/firebase-service-account.json
+
 # Production
 build/
 dist/
