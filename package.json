@@ -1,0 +1,17 @@
+{
+  "name": "anime-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Monorepo de Anime Tracker: backend Express + frontend React",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix backend install",
+    "start": "node backend/server.js",
+    "backend:install": "npm --prefix backend install",
+    "backend:start": "npm --prefix backend start",
+    "frontend:install": "npm --prefix frontend install",
+    "frontend:build": "npm --prefix frontend run build"
+  }
+}

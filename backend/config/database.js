@@ -12,9 +12,10 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   ssl: {
-    // Aiven usa certificados válidos. Si tu proveedor usa un certificado
-    // auto-firmado, podés desactivar la validación con DB_SSL_REJECT_UNAUTHORIZED=false.
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+    // Por defecto no validamos el certificado para mantener compatibilidad
+    // con proveedores que usan CAs propias (Aiven, PlanetScale, etc.).
+    // Para exigir validación estricta: DB_SSL_STRICT=true
+    rejectUnauthorized: process.env.DB_SSL_STRICT === 'true'
   }
 });
 

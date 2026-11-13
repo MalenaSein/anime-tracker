@@ -50,6 +50,9 @@ npm start
 
 - **Backend (Render):** definir las variables de `backend/.env.example`. El endpoint
   `GET /ping` sirve para mantenerlo despierto con UptimeRobot.
+  - Si el servicio usa la raíz del repo: build `npm install`, start `npm start`.
+    El `postinstall` de la raíz instala las dependencias de `backend/`.
+  - Si el servicio usa `backend/` como Root Directory: build `npm ci`, start `npm start`.
 - **Frontend (GitHub Pages):** el workflow `.github/workflows/deploy.yml` compila y
   publica `frontend/build`. Requiere los secrets `REACT_APP_FIREBASE_*`.
 

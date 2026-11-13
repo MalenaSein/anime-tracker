@@ -7,13 +7,19 @@ require('dotenv').config();
 // ============================================
 // VALIDACIÓN DE VARIABLES DE ENTORNO
 // ============================================
-const REQUIRED_ENV = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'JWT_SECRET'];
+const REQUIRED_ENV = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
 const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
 
 if (missingEnv.length > 0) {
   console.error('💥 Faltan variables de entorno obligatorias:', missingEnv.join(', '));
   console.error('   Revisá backend/.env.example');
   process.exit(1);
+}
+
+// JWT_SECRET solo es necesario para los usuarios legacy (token propio).
+// Si falta, Firebase sigue funcionando y la app no se cae al arrancar.
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ JWT_SECRET no configurado. La autenticación JWT legacy quedará deshabilitada.');
 }
 
 const authRoutes = require('./routes/authRoutes');
