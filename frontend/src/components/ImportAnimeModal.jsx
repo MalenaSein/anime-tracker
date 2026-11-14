@@ -185,7 +185,7 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
         {error && <div style={styles.error}>{error}</div>}
         {result && (
           <div style={styles.success}>
-            Importados: {result.imported} · Ya existían: {result.skipped} · Fallidos: {result.failed}
+            Importados: {result.imported} · Portadas actualizadas: {result.updated || 0} · Ya existían: {result.skipped} · Fallidos: {result.failed}
           </div>
         )}
 

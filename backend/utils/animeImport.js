@@ -19,7 +19,7 @@ function normalizeAnimeImport(item) {
     return { ok: false, error: 'Formato de anime inválido' };
   }
 
-  const { nombre, tipo, estado, calificacion, capitulos_vistos } = item;
+  const { nombre, tipo, estado, calificacion, capitulos_vistos, imagen_url } = item;
 
   if (!isNonEmptyString(nombre)) {
     return { ok: false, error: 'El nombre es obligatorio' };
@@ -55,6 +55,18 @@ function normalizeAnimeImport(item) {
 
   const tipoLimpio = isNonEmptyString(tipo) ? tipo.trim().slice(0, 50) : 'Desconocido';
 
+  let imagen = null;
+  if (imagen_url !== undefined && imagen_url !== null && imagen_url !== '') {
+    if (
+      typeof imagen_url !== 'string' ||
+      !/^https?:\/\//i.test(imagen_url.trim()) ||
+      imagen_url.length > 500
+    ) {
+      return { ok: false, error: 'imagen_url debe ser una URL http(s) válida' };
+    }
+    imagen = imagen_url.trim();
+  }
+
   return {
     ok: true,
     value: {
@@ -62,7 +74,8 @@ function normalizeAnimeImport(item) {
       tipo: tipoLimpio,
       estado: estadoNormalizado,
       calificacion: rating,
-      capitulos_vistos: capsRaw
+      capitulos_vistos: capsRaw,
+      imagen_url: imagen
     }
   };
 }

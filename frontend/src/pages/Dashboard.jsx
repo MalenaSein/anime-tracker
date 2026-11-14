@@ -75,7 +75,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
     await loadAnimes();
     notify(
       'success',
-      `Importados: ${result.imported}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
+      `Importados: ${result.imported}${result.updated ? ` · Portadas actualizadas: ${result.updated}` : ''}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
     );
     return result;
   };

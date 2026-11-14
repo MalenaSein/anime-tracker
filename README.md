@@ -60,10 +60,11 @@ npm start
 
 La app tiene un botón **Importar lista** en el dashboard. Acepta:
 
-- El archivo `imports/animes.json` (formato `{ "animes": [...] }`).
+- El archivo `imports/animes.json` (formato `{ "animes": [...] }`, ya incluye portadas de AniList).
 - La lista original separada por tabs: `id, nombre, tipo, estado, rating, capítulos`.
 
-Los animes que ya existen en la cuenta se omiten automáticamente.
+Los animes que ya existen en la cuenta se omiten automáticamente. Si el JSON trae
+`imagen_url`, la importación también actualiza la portada de los animes existentes.
 
 ## Seguridad
 

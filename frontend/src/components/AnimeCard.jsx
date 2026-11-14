@@ -192,6 +192,8 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
             src={anime.imagen_url || 'https://placehold.co/44x62/374151/9ca3af?text=?'}
             alt={anime.nombre}
             style={ms.image}
+            loading="lazy"
+            referrerPolicy="no-referrer"
             onError={(e) => { e.target.src = 'https://placehold.co/44x62/374151/9ca3af?text=?'; }}
           />
 
@@ -413,7 +415,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
   return (
     <>
       <div style={styles.row}>
-        <div><img src={anime.imagen_url || 'https://placehold.co/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} onError={(e) => { e.target.src = 'https://placehold.co/70x100/374151/9ca3af?text=Anime'; }} /></div>
+        <div><img src={anime.imagen_url || 'https://placehold.co/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.target.src = 'https://placehold.co/70x100/374151/9ca3af?text=Anime'; }} /></div>
 
         <div>
           {isEditing ? (

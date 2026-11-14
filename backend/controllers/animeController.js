@@ -163,15 +163,16 @@ exports.importAnimes = async (req, res) => {
     }
 
     const [existingRows] = await db.query(
-      'SELECT nombre FROM animes WHERE user_id = ?',
+      'SELECT id, nombre FROM animes WHERE user_id = ?',
       [userId]
     );
-    const existingNames = new Set(
-      existingRows.map((row) => row.nombre.trim().toLowerCase())
+    const existingByName = new Map(
+      existingRows.map((row) => [row.nombre.trim().toLowerCase(), row.id])
     );
 
     const imported = [];
     const errors = [];
+    let updated = 0;
     const imagenPorDefecto = obtenerImagenPorDefecto();
 
     for (let index = 0; index < animes.length; index += 1) {
@@ -184,9 +185,25 @@ exports.importAnimes = async (req, res) => {
 
       const anime = normalized.value;
       const key = anime.nombre.toLowerCase();
+      const existingId = existingByName.get(key);
 
-      if (existingNames.has(key)) {
-        errors.push({ index, nombre: anime.nombre, error: 'Ya existe en tu lista', skipped: true });
+      if (existingId) {
+        // Si ya existe, solo actualizamos la portada (permite reparar
+        // importaciones viejas hechas con el placeholder).
+        if (anime.imagen_url) {
+          try {
+            await db.query(
+              'UPDATE animes SET imagen_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+              [anime.imagen_url, existingId, userId]
+            );
+            updated += 1;
+          } catch (error) {
+            console.error('❌ Error actualizando portada:', anime.nombre, error.message);
+            errors.push({ index, nombre: anime.nombre, error: 'No se pudo actualizar la portada' });
+          }
+        } else {
+          errors.push({ index, nombre: anime.nombre, error: 'Ya existe en tu lista', skipped: true });
+        }
         continue;
       }
 
@@ -198,7 +215,7 @@ exports.importAnimes = async (req, res) => {
           [
             userId,
             anime.nombre,
-            imagenPorDefecto,
+            anime.imagen_url || imagenPorDefecto,
             anime.tipo,
             anime.capitulos_vistos,
             anime.estado,
@@ -206,7 +223,7 @@ exports.importAnimes = async (req, res) => {
           ]
         );
 
-        existingNames.add(key);
+        existingByName.set(key, result.insertId);
         imported.push({ id: result.insertId, ...anime });
       } catch (error) {
         console.error('❌ Error importando anime:', anime.nombre, error.message);
@@ -216,6 +233,7 @@ exports.importAnimes = async (req, res) => {
 
     res.json({
       imported: imported.length,
+      updated,
       skipped: errors.filter((error) => error.skipped).length,
       failed: errors.filter((error) => !error.skipped).length,
       animes: imported,

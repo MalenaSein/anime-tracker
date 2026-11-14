@@ -17,7 +17,8 @@ test('normaliza un anime completo', () => {
     tipo: 'Seinen',
     estado: 'completado',
     calificacion: 5,
-    capitulos_vistos: 12
+    capitulos_vistos: 12,
+    imagen_url: null
   });
 });
 
@@ -40,6 +41,18 @@ test('rechaza nombres vacíos y ratings inválidos', () => {
   assert.equal(normalizeAnimeImport({ nombre: 'X', capitulos_vistos: -1 }).ok, false);
 });
 
+test('acepta una portada http(s) y rechaza URLs inválidas', () => {
+  const withImage = normalizeAnimeImport({
+    nombre: 'Erased',
+    imagen_url: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21234-XmqW39aQ9o7O.jpg'
+  });
+  assert.equal(withImage.ok, true);
+  assert.match(withImage.value.imagen_url, /^https:\/\//);
+
+  assert.equal(normalizeAnimeImport({ nombre: 'X', imagen_url: 'javascript:alert(1)' }).ok, false);
+  assert.equal(normalizeAnimeImport({ nombre: 'X', imagen_url: 'no-es-url' }).ok, false);
+});
+
 test('normaliza la lista real completa del usuario', () => {
   const data = require('../../imports/animes.json');
   assert.equal(Array.isArray(data.animes), true);
@@ -48,5 +61,6 @@ test('normaliza la lista real completa del usuario', () => {
   data.animes.forEach((anime, index) => {
     const result = normalizeAnimeImport(anime);
     assert.equal(result.ok, true, `El anime ${index + 1} es inválido: ${result.error}`);
+    assert.ok(result.value.imagen_url, `El anime ${index + 1} no tiene portada`);
   });
 });
