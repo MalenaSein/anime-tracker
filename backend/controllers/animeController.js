@@ -151,9 +151,11 @@ exports.updateAnime = async (req, res) => {
 // POST /api/animes/import
 // ============================================
 exports.importAnimes = async (req, res) => {
+  let connection;
+
   try {
     const userId = req.user.id;
-    const { animes } = req.body;
+    const { animes, replace = false } = req.body;
 
     if (!Array.isArray(animes) || animes.length === 0) {
       return res.status(400).json({ error: 'Debés enviar una lista de animes' });
@@ -161,87 +163,122 @@ exports.importAnimes = async (req, res) => {
     if (animes.length > 500) {
       return res.status(400).json({ error: 'El máximo es 500 animes por importación' });
     }
+    if (typeof replace !== 'boolean') {
+      return res.status(400).json({ error: 'replace debe ser booleano' });
+    }
 
-    const [existingRows] = await db.query(
-      'SELECT id, nombre FROM animes WHERE user_id = ?',
-      [userId]
-    );
-    const existingByName = new Map(
-      existingRows.map((row) => [row.nombre.trim().toLowerCase(), row.id])
-    );
-
-    const imported = [];
+    const prepared = [];
     const errors = [];
-    let updated = 0;
-    const imagenPorDefecto = obtenerImagenPorDefecto();
 
     for (let index = 0; index < animes.length; index += 1) {
       const normalized = normalizeAnimeImport(animes[index]);
-
       if (!normalized.ok) {
         errors.push({ index, nombre: animes[index]?.nombre, error: normalized.error });
-        continue;
+      } else {
+        prepared.push({ anime: normalized.value, index });
       }
+    }
 
-      const anime = normalized.value;
+    // Si se va a reemplazar la lista, todos los items deben ser válidos
+    // para no borrar datos y quedarnos con una importación a medias.
+    if (replace && errors.length > 0) {
+      return res.status(400).json({
+        error: 'Hay animes inválidos. Corregilos antes de reemplazar tu lista.',
+        errors
+      });
+    }
+
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const existingByName = new Map();
+    const imported = [];
+    let updated = 0;
+    let deleted = 0;
+    const imagenPorDefecto = obtenerImagenPorDefecto();
+
+    if (replace) {
+      const [deleteResult] = await connection.query(
+        'DELETE FROM animes WHERE user_id = ?',
+        [userId]
+      );
+      deleted = deleteResult.affectedRows;
+    } else {
+      const [existingRows] = await connection.query(
+        'SELECT id, nombre FROM animes WHERE user_id = ?',
+        [userId]
+      );
+      existingRows.forEach((row) => {
+        existingByName.set(row.nombre.trim().toLowerCase(), row.id);
+      });
+    }
+
+    for (const { anime, index } of prepared) {
       const key = anime.nombre.toLowerCase();
       const existingId = existingByName.get(key);
 
       if (existingId) {
+        if (replace) {
+          errors.push({ index, nombre: anime.nombre, error: 'Nombre duplicado en la lista', skipped: true });
+          continue;
+        }
+
         // Si ya existe, solo actualizamos la portada (permite reparar
         // importaciones viejas hechas con el placeholder).
         if (anime.imagen_url) {
-          try {
-            await db.query(
-              'UPDATE animes SET imagen_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
-              [anime.imagen_url, existingId, userId]
-            );
-            updated += 1;
-          } catch (error) {
-            console.error('❌ Error actualizando portada:', anime.nombre, error.message);
-            errors.push({ index, nombre: anime.nombre, error: 'No se pudo actualizar la portada' });
-          }
+          await connection.query(
+            'UPDATE animes SET imagen_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+            [anime.imagen_url, existingId, userId]
+          );
+          updated += 1;
         } else {
           errors.push({ index, nombre: anime.nombre, error: 'Ya existe en tu lista', skipped: true });
         }
         continue;
       }
 
-      try {
-        const [result] = await db.query(
-          `INSERT INTO animes
-            (user_id, nombre, imagen_url, tipo, capitulos_vistos, estado, calificacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            userId,
-            anime.nombre,
-            anime.imagen_url || imagenPorDefecto,
-            anime.tipo,
-            anime.capitulos_vistos,
-            anime.estado,
-            anime.calificacion
-          ]
-        );
+      const [result] = await connection.query(
+        `INSERT INTO animes
+          (user_id, nombre, imagen_url, tipo, capitulos_vistos, estado, calificacion)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          anime.nombre,
+          anime.imagen_url || imagenPorDefecto,
+          anime.tipo,
+          anime.capitulos_vistos,
+          anime.estado,
+          anime.calificacion
+        ]
+      );
 
-        existingByName.set(key, result.insertId);
-        imported.push({ id: result.insertId, ...anime });
-      } catch (error) {
-        console.error('❌ Error importando anime:', anime.nombre, error.message);
-        errors.push({ index, nombre: anime.nombre, error: 'No se pudo guardar' });
-      }
+      existingByName.set(key, result.insertId);
+      imported.push({ id: result.insertId, ...anime });
     }
+
+    await connection.commit();
 
     res.json({
       imported: imported.length,
       updated,
+      deleted,
       skipped: errors.filter((error) => error.skipped).length,
       failed: errors.filter((error) => !error.skipped).length,
       animes: imported,
       errors
     });
   } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('❌ Error haciendo rollback:', rollbackError.message);
+      }
+    }
     console.error('❌ Error importando animes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    if (connection) connection.release();
   }
 };
 

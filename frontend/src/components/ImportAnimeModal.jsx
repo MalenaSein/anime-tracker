@@ -44,6 +44,7 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
   const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   if (!show) return null;
 
@@ -52,6 +53,7 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
     setFileName('');
     setError('');
     setResult(null);
+    setReplaceExisting(false);
   };
 
   const handleClose = () => {
@@ -81,8 +83,9 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
 
     try {
       const list = parseList(text);
-      const summary = await onImport(list);
+      const summary = await onImport(list, { replace: replaceExisting });
       setResult(summary);
+      setReplaceExisting(false);
     } catch (err) {
       setError(err.message || 'No se pudo importar la lista');
     } finally {
@@ -131,6 +134,12 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
     },
     fileName: { color: '#9ca3af', fontSize: '0.8rem' },
     hint: { color: '#6b7280', fontSize: '0.78rem', lineHeight: '1.5', marginTop: '0.5rem' },
+    replaceRow: {
+      display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+      marginTop: '0.9rem', padding: '0.75rem', background: '#111827',
+      border: '1px solid #7f1d1d', borderRadius: '0.5rem',
+      color: '#fca5a5', fontSize: '0.82rem', lineHeight: '1.5'
+    },
     error: {
       background: '#7f1d1d', border: '1px solid #991b1b', color: '#fca5a5',
       padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.85rem', marginTop: '0.75rem'
@@ -182,10 +191,24 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
           Los animes que ya existen en tu cuenta se omiten automáticamente.
         </p>
 
+        <label style={styles.replaceRow}>
+          <input
+            type="checkbox"
+            checked={replaceExisting}
+            onChange={(event) => setReplaceExisting(event.target.checked)}
+            style={{ marginTop: '0.2rem' }}
+          />
+          <span>
+            <strong>Reemplazar mi lista actual.</strong> Borra todos mis animes y horarios
+            antes de importar. Usalo si querés empezar de cero; no se puede deshacer.
+          </span>
+        </label>
+
         {error && <div style={styles.error}>{error}</div>}
         {result && (
           <div style={styles.success}>
-            Importados: {result.imported} · Portadas actualizadas: {result.updated || 0} · Ya existían: {result.skipped} · Fallidos: {result.failed}
+            Importados: {result.imported} · Portadas actualizadas: {result.updated || 0}
+            {result.deleted ? ` · Eliminados: ${result.deleted}` : ''} · Ya existían: {result.skipped} · Fallidos: {result.failed}
           </div>
         )}
 

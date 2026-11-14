@@ -70,12 +70,12 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
     }
   };
 
-  const importAnimes = async (items) => {
-    const result = await animeAPI.importMany(items);
+  const importAnimes = async (items, options = {}) => {
+    const result = await animeAPI.importMany(items, options);
     await loadAnimes();
     notify(
       'success',
-      `Importados: ${result.imported}${result.updated ? ` · Portadas actualizadas: ${result.updated}` : ''}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
+      `Importados: ${result.imported}${result.updated ? ` · Portadas actualizadas: ${result.updated}` : ''}${result.deleted ? ` · Eliminados: ${result.deleted}` : ''}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
     );
     return result;
   };
