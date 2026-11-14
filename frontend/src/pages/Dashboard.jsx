@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, PlayCircle } from 'lucide-react';
+import { Plus, PlayCircle, Upload } from 'lucide-react';
 import { animeAPI } from '../services/api';
 import AnimeCard from '../components/AnimeCard';
 import AddAnimeModal from '../components/AddAnimeModal';
+import ImportAnimeModal from '../components/ImportAnimeModal';
 import SeasonModal from '../components/SeasonModal';
 import Navbar from '../components/Navbar';
 import Filters from '../components/Filters';
@@ -18,6 +19,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [showStatistics, setShowStatistics] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentUser, setCurrentUser] = useState(user);
@@ -66,6 +68,16 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
       notify('error', err.message || 'No se pudo agregar el anime');
       return false;
     }
+  };
+
+  const importAnimes = async (items) => {
+    const result = await animeAPI.importMany(items);
+    await loadAnimes();
+    notify(
+      'success',
+      `Importados: ${result.imported}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
+    );
+    return result;
   };
 
   const addNewSeason = async (id) => {
@@ -283,6 +295,15 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
                 {activeTab === 'por_ver' ? 'Agregar a Por Ver' : 'Nuevo Anime'}
               </button>
 
+              <button
+                onClick={() => setShowImportModal(true)}
+                style={{ ...styles.actionButton, background: 'transparent', borderColor: '#10b981', color: '#10b981' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = 'white'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#10b981'; }}
+              >
+                <Upload size={20} /> Importar lista
+              </button>
+
               {activeTab === 'viendo' && (
                 <button
                   onClick={() => setShowSeasonModal(true)}
@@ -345,6 +366,12 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
           show={showAddModal}
           onClose={() => setShowAddModal(false)}
           onAdd={(formData) => addAnime({ ...formData, estado: activeTab === 'por_ver' ? 'por_ver' : 'viendo' })}
+        />
+
+        <ImportAnimeModal
+          show={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={importAnimes}
         />
 
         <SeasonModal

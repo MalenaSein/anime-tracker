@@ -1,0 +1,942 @@
+{
+  "animes": [
+    {
+      "nombre": "1/2 ranma",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "7th Time Loop: The Villainess Enjoys a Carefree Life Married to Her Worst Enemy!",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "a condition called love",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "a couple of cuckoos",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 20
+    },
+    {
+      "nombre": "A Girl & Her Guard Dog",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "A mangaka's weirdly wonderful workplace",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "A sign of affection",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "aharen-san wa hakarenai",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 6
+    },
+    {
+      "nombre": "akatsuki no yona",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "Alya sometimes hides her feelings in russian",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "anyway, im falling in lofve with you",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "Ao haru ride",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "asoki asobase",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 1
+    },
+    {
+      "nombre": "attack on titan",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 65
+    },
+    {
+      "nombre": "Black clover",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 33
+    },
+    {
+      "nombre": "Brothers Conflict",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "can a boy-girl friendship survive?",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "can you keep a secret?",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Chainsaw Man",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "cherry magic! 30 years of virginity can make you a wizard",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Classroom of the Elite",
+      "tipo": "Desconocido",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 37
+    },
+    {
+      "nombre": "clean freak! aoyama kun",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 5
+    },
+    {
+      "nombre": "Code Geass",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 5
+    },
+    {
+      "nombre": "dakaichi - im being harassed by the sexiest man of the year",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 14
+    },
+    {
+      "nombre": "dandadan",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "Death note",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 37
+    },
+    {
+      "nombre": "Death Parade",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Demon slayer",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 70
+    },
+    {
+      "nombre": "domestic girlfriend",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "El verano en que Hikaru murió",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Erased",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Fruitsbasket",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 64
+    },
+    {
+      "nombre": "Gals can't be kind to otaku!?",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 5
+    },
+    {
+      "nombre": "given",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 15
+    },
+    {
+      "nombre": "Go For It, Nakamura-kun!!",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 7
+    },
+    {
+      "nombre": "Goukon ni Ittara Onna ga Inakatta Hanashi",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "grand blue dreaming",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 10
+    },
+    {
+      "nombre": "Haikyu",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 72
+    },
+    {
+      "nombre": "Hana-kimi",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Hells Paradise",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "higehiro",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "hitorijime my hero",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "honey lemon soda",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Horimiya",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 26
+    },
+    {
+      "nombre": "hunterxhunter",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 80
+    },
+    {
+      "nombre": "i got a cheat skill in another world ...",
+      "tipo": "Isekai",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "I Made Friends with the Second Prettiest Girl in My Class",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 7
+    },
+    {
+      "nombre": "I Want to End this Love Game",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 6
+    },
+    {
+      "nombre": "I'm Getting Married to a Girl I Hate in My Class",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "In the clear moonlit dusk",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "isekai-office-worker-the-other-worlds-books-depend-on-the-bean-counter",
+      "tipo": "Isekai",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Jujutsu kaisen",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 59
+    },
+    {
+      "nombre": "junjo romantica 3",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Kaguya-sama: love is war",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 8
+    },
+    {
+      "nombre": "Kaichou Wa Maid-Sama",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 27
+    },
+    {
+      "nombre": "Kakegurui",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "Kakegurui twin",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 6
+    },
+    {
+      "nombre": "Kamisama hajimemashita",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "Kiss him not me",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Koikimo",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Komisan cant communicated",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "kono oto tomare!: sounds of life",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 26
+    },
+    {
+      "nombre": "Kuroko no basket",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 79
+    },
+    {
+      "nombre": "la asesina del romance",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "la caja azul",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "la nobleza de las flores",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "Llegando a ti",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 44
+    },
+    {
+      "nombre": "los diarios de una boticaria",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 48
+    },
+    {
+      "nombre": "love stage!!",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 10
+    },
+    {
+      "nombre": "Lovely Complex",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "Mask Danshi wa Koishitakunai noni",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 1
+    },
+    {
+      "nombre": "mechanical marie",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Medida kuroiwa is impervious to my charms",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Mieruko-chan",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Mignon",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "mob psycho",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 17
+    },
+    {
+      "nombre": "monthly girls nozaki kun",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "more than a married couple but not lovers",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "mushoku tensei: jobless reincarnation",
+      "tipo": "Isekai",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 3
+    },
+    {
+      "nombre": "My awkward senpai",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "My dress up darling",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "My friend's little sister has it in for me!",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "My Happy Marriage",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 26
+    },
+    {
+      "nombre": "My Love Story with yamada kun at level 999",
+      "tipo": "Josei",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "my new boss is goofy",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Naruto",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 3
+    },
+    {
+      "nombre": "One piece",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 516
+    },
+    {
+      "nombre": "Ookami Shoujo to Kuro Ouji",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Orenchi no Furo Jijo",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "oshi no ko",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 35
+    },
+    {
+      "nombre": "Ouran Host Club",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 9
+    },
+    {
+      "nombre": "Pardon the Intrusion, I'm Home",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 7
+    },
+    {
+      "nombre": "Peligros en mi corazón",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 26
+    },
+    {
+      "nombre": "Periodo azul",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Please put them on, takamine-san",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Ponkotsu Fuuki Iin to Skirt-take ga Futekisetsu na JK no Hanashi",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 7
+    },
+    {
+      "nombre": "Rascal does not dream of bunny girl senpai",
+      "tipo": "Shojo",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "Rekishi ni Nokoru Akujo ni Naru zo",
+      "tipo": "Isekai",
+      "estado": "completado",
+      "calificacion": 5,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "relife",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 18
+    },
+    {
+      "nombre": "rent a girlfriend",
+      "tipo": "Shojo",
+      "estado": "viendo",
+      "calificacion": 2,
+      "capitulos_vistos": 55
+    },
+    {
+      "nombre": "Ririsa una chica en 2.5d",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "S1: Our Dating Story: The Experienced You and The Inexperienced Me",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Sakamoto days",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Sankaku Mado no Sotogawa wa Yoru",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "sasaki and miyano",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 14
+    },
+    {
+      "nombre": "sekai ichi hatsokoi",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 27
+    },
+    {
+      "nombre": "skip and loafer",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Solo Leveling",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 26
+    },
+    {
+      "nombre": "Spy family",
+      "tipo": "Shonen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 50
+    },
+    {
+      "nombre": "super lovers",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 20
+    },
+    {
+      "nombre": "Taiyou yori mo Mabushii Hoshi",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Tamon's b-side",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "The Angel Next Door Spoils Me Rotten",
+      "tipo": "Desconocido",
+      "estado": "por_ver",
+      "calificacion": null,
+      "capitulos_vistos": 0
+    },
+    {
+      "nombre": "The Case Study of Vanitas",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": null,
+      "capitulos_vistos": 6
+    },
+    {
+      "nombre": "The Foolish Angel Dances with the Devil",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "The invisible man and his soon-to-be wife",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "The Night Beyond the Tricornered Window",
+      "tipo": "BL",
+      "estado": "por_ver",
+      "calificacion": 3,
+      "capitulos_vistos": 0
+    },
+    {
+      "nombre": "The Ramparts of Ice",
+      "tipo": "Shojo",
+      "estado": "viendo",
+      "calificacion": null,
+      "capitulos_vistos": 7
+    },
+    {
+      "nombre": "the shiunji family children",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "the villainess is adored by the prince of the neighbor kingdom",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Tomo-chan Is a Girl!",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "Tonari no Kaibutsu-kun",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 13
+    },
+    {
+      "nombre": "tonikawa over the moon for you",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 31
+    },
+    {
+      "nombre": "Toradora",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 25
+    },
+    {
+      "nombre": "twilight out of focus",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Vampire Dormitory",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "wash it all away",
+      "tipo": "Shonen",
+      "estado": "abandonado",
+      "calificacion": 1,
+      "capitulos_vistos": 8
+    },
+    {
+      "nombre": "Watari-kun's ****** Is about to Collapse",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": 3,
+      "capitulos_vistos": 24
+    },
+    {
+      "nombre": "Witch Hat Atelier",
+      "tipo": "Seinen",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 8
+    },
+    {
+      "nombre": "With you, our love will make ir through",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "Wotakoi",
+      "tipo": "Josei",
+      "estado": "completado",
+      "calificacion": 1,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "yakusa fiance: raise wa tanin ga ii",
+      "tipo": "Josei",
+      "estado": "completado",
+      "calificacion": 4,
+      "capitulos_vistos": 12
+    },
+    {
+      "nombre": "yes no or maybe¡",
+      "tipo": "BL",
+      "estado": "completado",
+      "calificacion": 2,
+      "capitulos_vistos": 1
+    },
+    {
+      "nombre": "you and i are polar opposites",
+      "tipo": "Shojo",
+      "estado": "completado",
+      "calificacion": null,
+      "capitulos_vistos": 12
+    }
+  ]
+}

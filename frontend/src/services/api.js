@@ -108,6 +108,12 @@ export const animeAPI = {
     body: JSON.stringify(animeData)
   }),
 
+  importMany: (animes) => jsonRequest('/animes/import', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ animes })
+  }),
+
   update: (id, animeData) => jsonRequest(`/animes/${id}`, {
     method: 'PUT',
     headers: JSON_HEADERS,

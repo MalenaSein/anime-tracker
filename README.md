@@ -56,6 +56,15 @@ npm start
 - **Frontend (GitHub Pages):** el workflow `.github/workflows/deploy.yml` compila y
   publica `frontend/build`. Requiere los secrets `REACT_APP_FIREBASE_*`.
 
+## Importar animes en lote
+
+La app tiene un botón **Importar lista** en el dashboard. Acepta:
+
+- El archivo `imports/animes.json` (formato `{ "animes": [...] }`).
+- La lista original separada por tabs: `id, nombre, tipo, estado, rating, capítulos`.
+
+Los animes que ya existen en la cuenta se omiten automáticamente.
+
 ## Seguridad
 
 - No commitear `.env` ni `firebase-service-account.json`.

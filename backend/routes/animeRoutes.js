@@ -19,6 +19,10 @@ router.get('/', authMiddleware, animeController.getAnimes);
 // Crear un nuevo anime
 router.post('/', authMiddleware, animeController.createAnime);
 
+// POST /api/animes/import
+// Importar varios animes en lote
+router.post('/import', authMiddleware, animeController.importAnimes);
+
 // PUT /api/animes/:id
 // Actualizar un anime (capítulos, estado, calificación)
 router.put('/:id', authMiddleware, animeController.updateAnime);

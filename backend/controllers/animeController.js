@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { obtenerImagenAnime, obtenerImagenPorDefecto } = require('../services/imageService');
+const { normalizeAnimeImport } = require('../utils/animeImport');
 const {
   ESTADOS_ANIME,
   isNonEmptyString,
@@ -141,6 +142,87 @@ exports.updateAnime = async (req, res) => {
     res.json(updatedAnime[0]);
   } catch (error) {
     console.error('❌ Error actualizando anime:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// IMPORTAR ANIMES EN LOTE
+// POST /api/animes/import
+// ============================================
+exports.importAnimes = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { animes } = req.body;
+
+    if (!Array.isArray(animes) || animes.length === 0) {
+      return res.status(400).json({ error: 'Debés enviar una lista de animes' });
+    }
+    if (animes.length > 500) {
+      return res.status(400).json({ error: 'El máximo es 500 animes por importación' });
+    }
+
+    const [existingRows] = await db.query(
+      'SELECT nombre FROM animes WHERE user_id = ?',
+      [userId]
+    );
+    const existingNames = new Set(
+      existingRows.map((row) => row.nombre.trim().toLowerCase())
+    );
+
+    const imported = [];
+    const errors = [];
+    const imagenPorDefecto = obtenerImagenPorDefecto();
+
+    for (let index = 0; index < animes.length; index += 1) {
+      const normalized = normalizeAnimeImport(animes[index]);
+
+      if (!normalized.ok) {
+        errors.push({ index, nombre: animes[index]?.nombre, error: normalized.error });
+        continue;
+      }
+
+      const anime = normalized.value;
+      const key = anime.nombre.toLowerCase();
+
+      if (existingNames.has(key)) {
+        errors.push({ index, nombre: anime.nombre, error: 'Ya existe en tu lista', skipped: true });
+        continue;
+      }
+
+      try {
+        const [result] = await db.query(
+          `INSERT INTO animes
+            (user_id, nombre, imagen_url, tipo, capitulos_vistos, estado, calificacion)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            anime.nombre,
+            imagenPorDefecto,
+            anime.tipo,
+            anime.capitulos_vistos,
+            anime.estado,
+            anime.calificacion
+          ]
+        );
+
+        existingNames.add(key);
+        imported.push({ id: result.insertId, ...anime });
+      } catch (error) {
+        console.error('❌ Error importando anime:', anime.nombre, error.message);
+        errors.push({ index, nombre: anime.nombre, error: 'No se pudo guardar' });
+      }
+    }
+
+    res.json({
+      imported: imported.length,
+      skipped: errors.filter((error) => error.skipped).length,
+      failed: errors.filter((error) => !error.skipped).length,
+      animes: imported,
+      errors
+    });
+  } catch (error) {
+    console.error('❌ Error importando animes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
