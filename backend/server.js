@@ -105,9 +105,13 @@ app.get('/', (req, res) => {
   res.json({
     message: 'API de Anime Tracker funcionando',
     version: '2.0.0',
+    commit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown',
+    features: ['auth', 'animes', 'import', 'refresh-covers', 'schedules', 'push'],
     endpoints: {
       auth: '/api/auth',
       animes: '/api/animes',
+      import: '/api/animes/import',
+      refreshCovers: '/api/animes/refresh-covers',
       schedules: '/api/schedules',
       push: '/api/push'
     }
