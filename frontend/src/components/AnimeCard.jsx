@@ -103,6 +103,31 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
     }
   };
 
+  // Si la CDN original falla (bloqueo de hotlink, red, etc.) intentamos
+  // un proxy de imágenes antes del placeholder definitivo.
+  const handleImageError = (event, fallbackUrl) => {
+    const img = event.currentTarget;
+    const original = img.dataset.originalSrc || img.currentSrc || img.src;
+
+    if (img.dataset.fallbackApplied === '1') return;
+
+    if (!original || /placehold\.co|via\.placeholder\.com/.test(original)) {
+      img.dataset.fallbackApplied = '1';
+      img.src = fallbackUrl;
+      return;
+    }
+
+    if (img.dataset.proxied !== '1') {
+      img.dataset.originalSrc = original;
+      img.dataset.proxied = '1';
+      img.src = `https://wsrv.nl/?url=${encodeURIComponent(original)}&w=300&h=420&fit=cover`;
+      return;
+    }
+
+    img.dataset.fallbackApplied = '1';
+    img.src = fallbackUrl;
+  };
+
   const handleMenuAction = async (action) => {
     setShowMenu(false);
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -194,7 +219,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
             style={ms.image}
             loading="lazy"
             referrerPolicy="no-referrer"
-            onError={(e) => { e.target.src = 'https://placehold.co/44x62/374151/9ca3af?text=?'; }}
+            onError={(e) => handleImageError(e, 'https://placehold.co/44x62/374151/9ca3af?text=?')}
           />
 
           {/* Info central */}
@@ -415,7 +440,7 @@ const AnimeCard = ({ anime, isWatching, onUpdate, onDelete, isMobile = false }) 
   return (
     <>
       <div style={styles.row}>
-        <div><img src={anime.imagen_url || 'https://placehold.co/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.target.src = 'https://placehold.co/70x100/374151/9ca3af?text=Anime'; }} /></div>
+        <div><img src={anime.imagen_url || 'https://placehold.co/70x100/374151/9ca3af?text=Anime'} alt={anime.nombre} style={styles.image} loading="lazy" referrerPolicy="no-referrer" onError={(e) => handleImageError(e, 'https://placehold.co/70x100/374151/9ca3af?text=Anime')} /></div>
 
         <div>
           {isEditing ? (

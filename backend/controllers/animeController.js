@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('../config/database');
 const { obtenerImagenAnime, obtenerImagenPorDefecto } = require('../services/imageService');
 const { normalizeAnimeImport } = require('../utils/animeImport');
@@ -8,6 +10,36 @@ const {
   isValidEstado,
   isValidRating
 } = require('../utils/validation');
+
+const DEFAULT_IMAGE_HOSTS = ['placehold.co', 'via.placeholder.com'];
+
+function isPlaceholderImage(url) {
+  if (!url) return true;
+  return DEFAULT_IMAGE_HOSTS.some((host) => url.includes(host));
+}
+
+// Portadas ya resueltas para la lista importada. Permite reparar
+// los animes viejos sin hacer 134 búsquedas a AniList.
+function loadBundledCovers() {
+  try {
+    const file = path.join(__dirname, '..', '..', 'imports', 'animes.json');
+    if (!fs.existsSync(file)) return new Map();
+
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const map = new Map();
+
+    for (const anime of data.animes || []) {
+      if (anime?.nombre && anime?.imagen_url) {
+        map.set(anime.nombre.trim().toLowerCase(), anime.imagen_url);
+      }
+    }
+
+    return map;
+  } catch (error) {
+    console.warn('⚠️ No se pudo leer imports/animes.json:', error.message);
+    return new Map();
+  }
+}
 
 // ============================================
 // OBTENER TODOS LOS ANIMES DE UN USUARIO
@@ -142,6 +174,52 @@ exports.updateAnime = async (req, res) => {
     res.json(updatedAnime[0]);
   } catch (error) {
     console.error('❌ Error actualizando anime:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// ACTUALIZAR PORTADAS FALTANTES
+// POST /api/animes/refresh-covers
+// ============================================
+exports.refreshCovers = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await db.query(
+      'SELECT id, nombre, imagen_url FROM animes WHERE user_id = ?',
+      [userId]
+    );
+
+    const missing = rows.filter((row) => isPlaceholderImage(row.imagen_url));
+    const bundledCovers = loadBundledCovers();
+    const notFound = [];
+
+    let updated = 0;
+
+    for (const row of missing) {
+      const cover = bundledCovers.get(row.nombre.trim().toLowerCase());
+
+      if (!cover) {
+        notFound.push(row.nombre);
+        continue;
+      }
+
+      await db.query(
+        'UPDATE animes SET imagen_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+        [cover, row.id, userId]
+      );
+      updated += 1;
+    }
+
+    res.json({
+      total: rows.length,
+      missing: missing.length,
+      updated,
+      remaining: notFound.length,
+      notFound
+    });
+  } catch (error) {
+    console.error('❌ Error actualizando portadas:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

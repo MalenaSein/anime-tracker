@@ -114,6 +114,10 @@ export const animeAPI = {
     body: JSON.stringify({ animes, ...options })
   }),
 
+  refreshCovers: () => jsonRequest('/animes/refresh-covers', {
+    method: 'POST'
+  }),
+
   update: (id, animeData) => jsonRequest(`/animes/${id}`, {
     method: 'PUT',
     headers: JSON_HEADERS,

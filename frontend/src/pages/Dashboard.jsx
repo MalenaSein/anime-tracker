@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, PlayCircle, Upload } from 'lucide-react';
+import { Plus, PlayCircle, Upload, RefreshCw } from 'lucide-react';
 import { animeAPI } from '../services/api';
 import AnimeCard from '../components/AnimeCard';
 import AddAnimeModal from '../components/AddAnimeModal';
@@ -25,6 +25,7 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
   const [currentUser, setCurrentUser] = useState(user);
   const [filters, setFilters] = useState({ tipo: '', rating: '', sortBy: 'updated' });
   const [message, setMessage] = useState(null);
+  const [refreshingCovers, setRefreshingCovers] = useState(false);
   const messageTimer = useRef(null);
 
   const notify = (type, text) => {
@@ -72,12 +73,48 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
 
   const importAnimes = async (items, options = {}) => {
     const result = await animeAPI.importMany(items, options);
+
+    // Si se importó una lista sin portadas (por ejemplo, pegada como TSV),
+    // completamos las imágenes desde imports/animes.json sin duplicar nada.
+    try {
+      const covers = await animeAPI.refreshCovers();
+      result.coversUpdated = covers.updated;
+      result.coversRemaining = covers.remaining;
+    } catch (coverError) {
+      console.warn('No se pudieron actualizar las portadas:', coverError.message);
+    }
+
     await loadAnimes();
     notify(
       'success',
-      `Importados: ${result.imported}${result.updated ? ` · Portadas actualizadas: ${result.updated}` : ''}${result.deleted ? ` · Eliminados: ${result.deleted}` : ''}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
+      `Importados: ${result.imported}${result.updated ? ` · Portadas actualizadas: ${result.updated}` : ''}${result.coversUpdated ? ` · Portadas corregidas: ${result.coversUpdated}` : ''}${result.deleted ? ` · Eliminados: ${result.deleted}` : ''}${result.skipped ? ` · Ya existían: ${result.skipped}` : ''}${result.failed ? ` · Fallidos: ${result.failed}` : ''}`
     );
     return result;
+  };
+
+  const refreshCovers = async () => {
+    if (refreshingCovers) return;
+
+    setRefreshingCovers(true);
+    try {
+      const result = await animeAPI.refreshCovers();
+      await loadAnimes();
+
+      if (result.missing === 0) {
+        notify('success', 'Todas las portadas ya estaban cargadas');
+      } else {
+        notify(
+          result.updated ? 'success' : 'error',
+          `Portadas actualizadas: ${result.updated}${result.remaining ? ` · Sin coincidencia: ${result.remaining}` : ''}`
+        );
+      }
+      return result;
+    } catch (error) {
+      notify('error', error.message || 'No se pudieron actualizar las portadas');
+      return null;
+    } finally {
+      setRefreshingCovers(false);
+    }
   };
 
   const addNewSeason = async (id) => {
@@ -302,6 +339,16 @@ const Dashboard = ({ user, onLogout, onUserUpdated }) => {
                 onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#10b981'; }}
               >
                 <Upload size={20} /> Importar lista
+              </button>
+
+              <button
+                onClick={refreshCovers}
+                disabled={refreshingCovers}
+                style={{ ...styles.actionButton, background: 'transparent', borderColor: '#f59e0b', color: '#f59e0b', cursor: refreshingCovers ? 'wait' : 'pointer' }}
+                onMouseOver={(e) => { if (!refreshingCovers) { e.currentTarget.style.background = '#f59e0b'; e.currentTarget.style.color = 'white'; } }}
+                onMouseOut={(e) => { if (!refreshingCovers) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#f59e0b'; } }}
+              >
+                <RefreshCw size={20} /> {refreshingCovers ? 'Actualizando...' : 'Actualizar portadas'}
               </button>
 
               {activeTab === 'viendo' && (

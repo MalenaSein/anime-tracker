@@ -23,6 +23,10 @@ router.post('/', authMiddleware, animeController.createAnime);
 // Importar varios animes en lote
 router.post('/import', authMiddleware, animeController.importAnimes);
 
+// POST /api/animes/refresh-covers
+// Completar portadas faltantes de animes existentes
+router.post('/refresh-covers', authMiddleware, animeController.refreshCovers);
+
 // PUT /api/animes/:id
 // Actualizar un anime (capítulos, estado, calificación)
 router.put('/:id', authMiddleware, animeController.updateAnime);

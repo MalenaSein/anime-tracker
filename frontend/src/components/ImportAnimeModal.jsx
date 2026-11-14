@@ -208,7 +208,9 @@ const ImportAnimeModal = ({ show, onClose, onImport }) => {
         {result && (
           <div style={styles.success}>
             Importados: {result.imported} · Portadas actualizadas: {result.updated || 0}
+            {result.coversUpdated ? ` · Portadas corregidas: ${result.coversUpdated}` : ''}
             {result.deleted ? ` · Eliminados: ${result.deleted}` : ''} · Ya existían: {result.skipped} · Fallidos: {result.failed}
+            {result.coversRemaining ? ` · Sin portada: ${result.coversRemaining}` : ''}
           </div>
         )}
 
